@@ -1,6 +1,6 @@
 # 🎙️ Claude Standup MCP Server
 
-GitHub の作業状況を自動収集し、Claude の音声モードで毎日の朝会・夕会を行うための MCP サーバーです。
+GitHub の作業状況を自動収集し、毎日の朝会・夕会を行うための MCP サーバーです。
 
 ## 概要
 
@@ -29,7 +29,6 @@ GitHub の作業状況を自動収集し、Claude の音声モードで毎日の
 |--------|------|-------------|
 | Git | コミット履歴・差分取得 | 通常インストール済み |
 | GitHub CLI (`gh`) | PR・Issue 取得 | `brew install gh` |
-| Claude アプリ | 音声対話 | iOS / Android / Desktop |
 
 ## MCP サーバーとしての使い方
 
@@ -128,12 +127,6 @@ Claude が `collect_standup_info` ツールを自動的に呼び出します。
 Show me the standup://current resource
 ```
 
-### 音声モードでの使い方
-
-1. Claude Desktop で上記のいずれかの方法で情報を取得
-2. 🎤 音声モードに切り替え（マイクアイコンをクリック）
-3. 自然な会話で朝会・夕会を進める
-
 ---
 
 ## スタンドアロン版（シェルスクリプト）の使い方
@@ -171,7 +164,6 @@ SINCE_HOURS=48 standup ~/projects/my-app
 
 1. claude.ai のプロジェクトを開く
 2. クリップボードの内容をペースト（Cmd+V）
-3. 🎤 音声モードに切り替えて会話
 
 ## 複数リポジトリの場合
 
@@ -202,14 +194,6 @@ for repo in ~/projects/repo-a ~/projects/repo-b; do
 done
 cat "$COMBINED" | pbcopy
 ```
-
-## 音声モードの Tips
-
-- **静かな環境**で使うと認識精度が上がる
-- **短い文で話す**と Claude の応答が速い
-- 「次」「続けて」などで会話を進められる
-- 技術用語は認識されにくいこともあるので、固有名詞はチャットで補足するとよい
-- 朝の通勤中に AirPods で使うのもおすすめ
 
 ## カスタマイズ例
 
@@ -254,9 +238,6 @@ A: はい。`gh` CLI が認証済みなら、プライベートリポジトリ�
 
 **Q: どのリポジトリでも使える？**
 A: Git リポジトリであれば使えます。GitHub 連携機能（PR、Issue）は GitHub リポジトリでのみ動作します。
-
-**Q: 音声モードで使える？**
-A: はい。Claude Desktop の音声モードと組み合わせて、自然な会話形式で朝会・夕会を進められます。
 
 ## 開発者向け
 
