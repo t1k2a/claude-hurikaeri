@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "朝会・夕会": {
+      "command": "node",
+      "args": [
+        "/path/to/claude-hurikaeri/build/index.js"
+      ]
+    }
+  }
+}

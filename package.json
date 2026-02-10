@@ -1,0 +1,44 @@
+{
+  "name": "claude-hurikaeri-mcp",
+  "version": "1.0.0",
+  "description": "MCP server for GitHub standup meetings with Claude - 朝会・夕会",
+  "type": "module",
+  "main": "build/index.js",
+  "bin": {
+    "claude-hurikaeri-mcp": "build/index.js"
+  },
+  "files": [
+    "build",
+    "README.md",
+    "system_prompt.md"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc --watch",
+    "prepare": "npm run build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-username/claude-hurikaeri.git"
+  },
+  "keywords": [
+    "mcp",
+    "claude",
+    "github",
+    "standup",
+    "scrum",
+    "model-context-protocol"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.4"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "typescript": "^5.7.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

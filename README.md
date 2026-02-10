@@ -1,8 +1,27 @@
-# 🎙️ Claude 音声朝会・夕会 セットアップガイド
+# 🎙️ Claude Standup MCP Server
+
+GitHub の作業状況を自動収集し、Claude の音声モードで毎日の朝会・夕会を行うための MCP サーバーです。
 
 ## 概要
 
-GitHub の作業状況を自動収集し、Claude の音声モードで毎日の朝会・夕会を行うワークフローです。
+このプロジェクトは、GitHub リポジトリから以下の情報を収集します：
+- コミット履歴と変更詳細
+- 未コミットの差分
+- Pull Request の状態（オープン、マージ済み、レビュー待ち）
+
+収集した情報を Claude に渡すことで、朝会・夕会を効率的に進められます。
+
+## 提供される機能
+
+### 🔧 Tools（ツール）
+- **collect_standup_info** - リポジトリから朝会・夕会用の情報を収集
+
+### 📦 Resources（リソース）
+- **standup://current** - 現在のディレクトリのスタンドアップ情報
+
+### 💬 Prompts（プロンプト）
+- **morning-standup** - 朝会用のプロンプト（過去24時間の情報）
+- **evening-standup** - 夕会用のプロンプト（今日の作業分）
 
 ## 必要なもの
 
@@ -12,18 +31,116 @@ GitHub の作業状況を自動収集し、Claude の音声モードで毎日の
 | GitHub CLI (`gh`) | PR・Issue 取得 | `brew install gh` |
 | Claude アプリ | 音声対話 | iOS / Android / Desktop |
 
-## 初期セットアップ
+## MCP サーバーとしての使い方
 
-### 1. GitHub CLI の認証
+### 1. 前提条件
+
+以下のツールがインストールされている必要があります：
+
+| ツール | 用途 | インストール |
+|--------|------|-------------|
+| Node.js | MCP サーバー実行 | [nodejs.org](https://nodejs.org/) |
+| Git | コミット履歴・差分取得 | 通常インストール済み |
+| GitHub CLI (`gh`) | PR・Issue 取得 | `brew install gh` |
+
+### 2. GitHub CLI の認証
 
 ```bash
 gh auth login
 ```
 
-### 2. スクリプトの配置
+### 3. MCP サーバーのインストール
 
-`collect.sh` は **リポジトリの中には置きません**。
-`~/bin` など PATH の通った場所に1つだけ置いて、どのリポジトリからでも使えるようにします。
+```bash
+# npmからインストール（公開後）
+npm install -g claude-hurikaeri-mcp
+
+# または、このリポジトリから直接
+git clone https://github.com/your-username/claude-hurikaeri.git
+cd claude-hurikaeri
+npm install
+npm run build
+npm link
+```
+
+### 4. Claude Desktop の設定
+
+Claude Desktop の設定ファイル（`~/Library/Application Support/Claude/claude_desktop_config.json`）に以下を追加：
+
+```json
+{
+  "mcpServers": {
+    "claude-standup": {
+      "command": "node",
+      "args": ["/path/to/claude-hurikaeri/build/index.js"]
+    }
+  }
+}
+```
+
+または、グローバルインストールした場合：
+
+```json
+{
+  "mcpServers": {
+    "claude-standup": {
+      "command": "claude-hurikaeri-mcp"
+    }
+  }
+}
+```
+
+### 5. Claude Desktop を再起動
+
+設定を反映させるため、Claude Desktop を再起動してください。
+
+## MCP を使った朝会・夕会の進め方
+
+### 方法1: Prompts を使う（推奨）
+
+Claude Desktop で以下のように入力：
+
+**朝会：**
+```
+Use morning-standup prompt with repo_path: ~/projects/my-app
+```
+
+**夕会：**
+```
+Use evening-standup prompt with repo_path: ~/projects/my-app and work_hours: 10
+```
+
+### 方法2: Tools を使う
+
+Claude Desktop で以下のように依頼：
+
+```
+Collect standup info from ~/projects/my-app for the last 24 hours
+```
+
+Claude が `collect_standup_info` ツールを自動的に呼び出します。
+
+### 方法3: Resources を使う
+
+現在のディレクトリのスタンドアップ情報を取得：
+
+```
+Show me the standup://current resource
+```
+
+### 音声モードでの使い方
+
+1. Claude Desktop で上記のいずれかの方法で情報を取得
+2. 🎤 音声モードに切り替え（マイクアイコンをクリック）
+3. 自然な会話で朝会・夕会を進める
+
+---
+
+## スタンドアロン版（シェルスクリプト）の使い方
+
+MCP を使わずに、従来のシェルスクリプトでも利用できます。
+
+### 1. スクリプトの配置
 
 ```bash
 # ~/bin ディレクトリを作成（なければ）
@@ -34,67 +151,48 @@ cp collect.sh ~/bin/standup
 chmod +x ~/bin/standup
 
 # PATH に追加（~/.zshrc または ~/.bashrc に書く）
-# すでに ~/bin が PATH に入っていればスキップしてOK
 echo 'export PATH="$HOME/bin:$PATH"' >> ~/.zshrc
 source ~/.zshrc
 ```
 
-これで、ターミナルのどこからでも `standup` コマンドが使えるようになります。
-
-### 3. Claude プロジェクトの作成
-
-1. [claude.ai](https://claude.ai) にアクセス
-2. 左メニューから「Projects」→「+ Create project」
-3. プロジェクト名: 「朝会・夕会」など
-4. 「Instructions」に `system_prompt.md` の内容を貼り付け
-5. 保存
-
-## 毎日の使い方
-
-### 朝会（出勤時・作業開始前）
-
-**ステップ1: ターミナルで情報収集**
+### 2. 使い方
 
 ```bash
-# 方法A: リポジトリに移動してから実行
-cd ~/projects/my-app
-standup
-
-# 方法B: 引数でリポジトリのパスを指定（移動しなくてOK）
+# リポジトリの情報を収集
 standup ~/projects/my-app
 
-# 期間を変えたい場合（例: 48時間分）
+# 期間を変えたい場合
 SINCE_HOURS=48 standup ~/projects/my-app
 ```
 
-→ `~/standup/my-app_2026-02-09.md` のようなファイルが生成され、**自動でクリップボードにコピー**されます。
-リポジトリの中にはファイルを作りません。
+→ `~/standup/my-app_2026-02-09.md` のようなファイルが生成され、自動でクリップボードにコピーされます。
 
-**ステップ2: Claude で音声会話を開始**
+### 3. Claude で使う
 
-1. claude.ai のプロジェクト「朝会・夕会」を開く
-2. クリップボードの内容をペースト（Cmd+V）して送信
-3. 🎤 音声モードに切り替え（マイクアイコンをタップ）
-4. 声で会話しながら朝会を進める
+1. claude.ai のプロジェクトを開く
+2. クリップボードの内容をペースト（Cmd+V）
+3. 🎤 音声モードに切り替えて会話
 
-### 夕会（作業終了時）
+## 複数リポジトリの場合
 
-```bash
-# 今日の作業分だけ収集（例: 10時間分）
-SINCE_HOURS=10 standup ~/projects/my-app
+### MCP 版
+
+複数のリポジトリの情報を順番に取得：
+
+```
+Collect standup info from:
+1. ~/projects/repo-a
+2. ~/projects/repo-b
 ```
 
-あとは朝会と同じ手順で Claude に貼り付けて音声会話。
-
-## 複数リポジトリがある場合
+### スタンドアロン版
 
 ```bash
-# それぞれ実行（~/standup/ に別々のファイルとして保存される）
-standup ~/projects/repo-a   # → ~/standup/repo-a_2026-02-09.md
-standup ~/projects/repo-b   # → ~/standup/repo-b_2026-02-09.md
+# それぞれ実行
+standup ~/projects/repo-a
+standup ~/projects/repo-b
 
-# まとめて1つのクリップボードにしたい場合
-#!/bin/bash
+# まとめて1つのファイルにする
 COMBINED="/tmp/all_standup.md"
 > "$COMBINED"
 for repo in ~/projects/repo-a ~/projects/repo-b; do
@@ -142,17 +240,49 @@ macOS の Automator やショートカットアプリで、スクリプト実行
 
 ## よくある質問
 
-**Q: collect.sh はリポジトリの中に置くの？**
-A: いいえ。`~/bin/standup` として1箇所に置くだけです。スクリプトは「今いるディレクトリ」または「引数で渡したパス」の Git リポジトリ情報を収集します。リポジトリごとにコピーする必要はありません。
+**Q: MCP 版とスタンドアロン版の違いは？**
+A: MCP 版は Claude Desktop と直接連携し、プロンプトやツールとして統合されます。スタンドアロン版はシェルスクリプトで、claude.ai でも使えます。
 
-**Q: 出力ファイルはどこに作られる？**
-A: `~/standup/` ディレクトリに `リポジトリ名_日付.md`（例: `my-app_2026-02-09.md`）として保存されます。リポジトリの中にはファイルを作りません。出力先を変えたい場合は環境変数 `STANDUP_DIR` で指定できます。
-
-**Q: 音声モードで GitHub の情報を読み上げてくれる？**
-A: はい。会話にサマリーを貼り付けておけば、Claude がその内容を理解した上で音声で要約・対話してくれます。
+**Q: MCP サーバーが動作しない場合は？**
+A: 以下を確認してください：
+- GitHub CLI (`gh`) が認証済みか: `gh auth status`
+- Node.js のバージョンが 18 以上か: `node --version`
+- Claude Desktop を再起動したか
 
 **Q: プライベートリポジトリでも使える？**
 A: はい。`gh` CLI が認証済みなら、プライベートリポジトリの PR/Issue も取得できます。
 
-**Q: モバイルでも使える？**
-A: Claude モバイルアプリの音声モードで使えます。GitHub 情報の収集はPC側で行い、テキストをコピペするか、PCの Claude で事前に会話を始めておくとスムーズです。
+**Q: どのリポジトリでも使える？**
+A: Git リポジトリであれば使えます。GitHub 連携機能（PR、Issue）は GitHub リポジトリでのみ動作します。
+
+**Q: 音声モードで使える？**
+A: はい。Claude Desktop の音声モードと組み合わせて、自然な会話形式で朝会・夕会を進められます。
+
+## 開発者向け
+
+### ビルド
+
+```bash
+npm run build
+```
+
+### ウォッチモード
+
+```bash
+npm run watch
+```
+
+### ローカルテスト
+
+```bash
+# ビルド後
+node build/index.js
+```
+
+## ライセンス
+
+MIT
+
+## 貢献
+
+Issue や Pull Request をお待ちしています！
