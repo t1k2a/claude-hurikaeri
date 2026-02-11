@@ -19,7 +19,11 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/your-username/claude-hurikaeri.git"
+    "url": "https://github.com/t1k2a/claude-hurikaeri.git"
+  },
+  "homepage": "https://github.com/t1k2a/claude-hurikaeri#readme",
+  "bugs": {
+    "url": "https://github.com/t1k2a/claude-hurikaeri/issues"
   },
   "keywords": [
     "mcp",
