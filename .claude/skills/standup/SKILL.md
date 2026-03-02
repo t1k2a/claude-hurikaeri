@@ -38,6 +38,8 @@ argument-hint: "[morning|evening] [hours]"
 現在のディレクトリで以下のコマンドを順番に実行してください。
 各コマンドが失敗した場合はスキップして次に進んでください。
 
+**重要**: GitHub CLI (`gh`) がインストールされていない場合、PR情報は取得できませんが、Git 情報（コミット履歴、差分など）は正常に取得できます。
+
 ### 基本情報
 
 ```bash
@@ -69,6 +71,16 @@ git diff --cached --stat
 ```
 
 ### Pull Request 情報（gh CLI が必要）
+
+**注意**: 以下のコマンドは `gh` CLI がインストールされている場合のみ実行してください。
+`gh` がない場合はこのセクションをスキップし、レポートに「GitHub CLI がインストールされていないため、PR情報は取得できませんでした」と記載してください。
+
+まず `gh` が利用可能か確認：
+```bash
+command -v gh >/dev/null 2>&1 && echo "gh available" || echo "gh not found"
+```
+
+`gh` が利用可能な場合のみ以下を実行：
 
 ```bash
 gh pr list --author="@me" --state=open --json number,title,updatedAt,url --template '{{range .}}- #{{.number}} {{.title}} (更新: {{.updatedAt}})
@@ -106,9 +118,14 @@ gh pr list --search "review-requested:@me" --state=open --json number,title,auth
 <diff stat と差分内容（先頭200行）>
 
 ## Pull Requests
+（gh が利用可能な場合）
 ### オープン中のPR（自分）
 ### 最近マージされたPR
 ### レビュー依頼されているPR
+
+（gh が利用不可の場合）
+⚠️ GitHub CLI (`gh`) がインストールされていないため、PR情報を取得できませんでした。
+インストール方法: brew install gh && gh auth login
 ```
 
 該当データがない項目は「なし」と記載してください。

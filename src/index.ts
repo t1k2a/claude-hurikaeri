@@ -154,6 +154,7 @@ function collectStandupInfo(repoPath: string, sinceHours: number): StandupInfo {
     openPRs,
     mergedPRs,
     reviewPRs,
+    ghAvailable,
   };
 }
 
@@ -198,12 +199,25 @@ function formatStandupMarkdown(info: StandupInfo): string {
   }
 
   markdown += "\n---\n\n## 🔃 Pull Requests\n";
-  markdown += "### オープン中のPR（自分）\n";
-  markdown += info.openPRs || "オープン中のPRはありません。\n";
-  markdown += "\n### 最近マージされたPR\n";
-  markdown += info.mergedPRs || "最近マージされたPRはありません。\n";
-  markdown += "\n### レビュー依頼されているPR\n";
-  markdown += info.reviewPRs || "レビュー待ちのPRはありません。\n";
+
+  if (!info.ghAvailable) {
+    markdown += "⚠️ **GitHub CLI (`gh`) がインストールされていないため、PR情報を取得できませんでした。**\n\n";
+    markdown += "PR情報を表示するには以下をインストールしてください：\n";
+    markdown += "```bash\n";
+    markdown += "# macOS/Linux\n";
+    markdown += "brew install gh\n";
+    markdown += "gh auth login\n";
+    markdown += "\n";
+    markdown += "# または: https://cli.github.com/\n";
+    markdown += "```\n";
+  } else {
+    markdown += "### オープン中のPR（自分）\n";
+    markdown += info.openPRs || "オープン中のPRはありません。\n";
+    markdown += "\n### 最近マージされたPR\n";
+    markdown += info.mergedPRs || "最近マージされたPRはありません。\n";
+    markdown += "\n### レビュー依頼されているPR\n";
+    markdown += info.reviewPRs || "レビュー待ちのPRはありません。\n";
+  }
 
   markdown += "\n---\n\n> このサマリーを Claude の会話に貼り付けて、音声モードで朝会・夕会を始めましょう！\n";
 
