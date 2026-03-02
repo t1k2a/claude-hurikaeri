@@ -27,6 +27,7 @@ interface StandupInfo {
   openPRs: string;
   mergedPRs: string;
   reviewPRs: string;
+  ghAvailable: boolean;
 }
 
 /**
@@ -41,6 +42,21 @@ function execCommand(command: string, cwd: string): string {
     }).trim();
   } catch (error) {
     return "";
+  }
+}
+
+/**
+ * Check if a command is available
+ */
+function isCommandAvailable(command: string): boolean {
+  try {
+    execSync(`command -v ${command}`, {
+      encoding: "utf-8",
+      stdio: ["pipe", "pipe", "pipe"],
+    });
+    return true;
+  } catch (error) {
+    return false;
   }
 }
 
@@ -71,7 +87,23 @@ function collectStandupInfo(repoPath: string, sinceHours: number): StandupInfo {
 
   const repoName = basename(execCommand("git rev-parse --show-toplevel", absPath));
   const branch = execCommand("git branch --show-current", absPath);
-  const remoteUrl = execCommand("gh repo view --json url -q '.url'", absPath) || "Unknown";
+
+  // Check if gh CLI is available
+  const ghAvailable = isCommandAvailable("gh");
+  let remoteUrl = "Unknown";
+  let openPRs = "";
+  let mergedPRs = "";
+  let reviewPRs = "";
+
+  if (ghAvailable) {
+    remoteUrl = execCommand("gh repo view --json url -q '.url'", absPath) || "Unknown";
+  } else {
+    // Fallback: try to get remote URL from git config
+    const gitRemote = execCommand("git config --get remote.origin.url", absPath);
+    if (gitRemote) {
+      remoteUrl = gitRemote;
+    }
+  }
 
   const sinceDate = getSinceDate(sinceHours);
 
@@ -92,20 +124,22 @@ function collectStandupInfo(repoPath: string, sinceHours: number): StandupInfo {
   const stagedDiff = execCommand("git diff --cached --stat", absPath);
 
   // Collect PR information (requires gh CLI)
-  const openPRs = execCommand(
-    'gh pr list --author="@me" --state=open --json number,title,updatedAt,url --template \'{{range .}}- #{{.number}} {{.title}} (更新: {{.updatedAt}})\\n  {{.url}}\\n{{end}}\'',
-    absPath
-  );
+  if (ghAvailable) {
+    openPRs = execCommand(
+      'gh pr list --author="@me" --state=open --json number,title,updatedAt,url --template \'{{range .}}- #{{.number}} {{.title}} (更新: {{.updatedAt}})\\n  {{.url}}\\n{{end}}\'',
+      absPath
+    );
 
-  const mergedPRs = execCommand(
-    'gh pr list --author="@me" --state=merged --limit 5 --json number,title,mergedAt,url --template \'{{range .}}- #{{.number}} {{.title}} (マージ: {{.mergedAt}})\\n  {{.url}}\\n{{end}}\'',
-    absPath
-  );
+    mergedPRs = execCommand(
+      'gh pr list --author="@me" --state=merged --limit 5 --json number,title,mergedAt,url --template \'{{range .}}- #{{.number}} {{.title}} (マージ: {{.mergedAt}})\\n  {{.url}}\\n{{end}}\'',
+      absPath
+    );
 
-  const reviewPRs = execCommand(
-    'gh pr list --search "review-requested:@me" --state=open --json number,title,author,url --template \'{{range .}}- #{{.number}} {{.title}} (by {{.author.login}})\\n  {{.url}}\\n{{end}}\'',
-    absPath
-  );
+    reviewPRs = execCommand(
+      'gh pr list --search "review-requested:@me" --state=open --json number,title,author,url --template \'{{range .}}- #{{.number}} {{.title}} (by {{.author.login}})\\n  {{.url}}\\n{{end}}\'',
+      absPath
+    );
+  }
 
   return {
     repoName,

@@ -1,7 +1,7 @@
 {
   "name": "claude-hurikaeri-mcp",
   "version": "1.0.0",
-  "description": "MCP server for GitHub standup meetings with Claude - 朝会・夕会",
+  "description": "Claude Code skill & MCP server for GitHub standup meetings - 朝会・夕会",
   "type": "module",
   "main": "build/index.js",
   "bin": {
@@ -9,6 +9,7 @@
   },
   "files": [
     "build",
+    ".claude/skills",
     "README.md",
     "system_prompt.md"
   ],
@@ -28,6 +29,7 @@
   "keywords": [
     "mcp",
     "claude",
+    "claude-code-skill",
     "github",
     "standup",
     "scrum",

@@ -1,27 +1,70 @@
-# 🎙️ Claude Standup MCP Server
+# Claude Standup（朝会・夕会アシスタント）
 
-GitHub の作業状況を自動収集し、毎日の朝会・夕会を行うための MCP サーバーです。
+GitHub の作業状況を自動収集し、毎日の朝会・夕会を Claude と行うためのツールです。
+Claude Code スキルまたは MCP サーバーとして利用できます。
 
 ## 概要
 
-このプロジェクトは、GitHub リポジトリから以下の情報を収集します：
+GitHub リポジトリから以下の情報を自動収集し、スクラムマスターとして朝会・夕会を進めます：
 - コミット履歴と変更詳細
 - 未コミットの差分
 - Pull Request の状態（オープン、マージ済み、レビュー待ち）
 
-収集した情報を Claude に渡すことで、朝会・夕会を効率的に進められます。
+## Claude Code スキルとしての使い方（推奨）
 
-## 提供される機能
+MCP サーバーのセットアップ不要で、Claude Code から直接使えます。
 
-### 🔧 Tools（ツール）
-- **collect_standup_info** - リポジトリから朝会・夕会用の情報を収集
+### インストール
 
-### 📦 Resources（リソース）
-- **standup://current** - 現在のディレクトリのスタンドアップ情報
+```bash
+# リポジトリをクローン
+git clone https://github.com/t1k2a/claude-hurikaeri.git
 
-### 💬 Prompts（プロンプト）
-- **morning-standup** - 朝会用のプロンプト（過去24時間の情報）
-- **evening-standup** - 夕会用のプロンプト（今日の作業分）
+# 個人用（全プロジェクトで使える）
+cp -r claude-hurikaeri/.claude/skills/standup ~/.claude/skills/
+
+# または、プロジェクト用（特定プロジェクトのみ）
+mkdir -p <your-project>/.claude/skills/
+cp -r claude-hurikaeri/.claude/skills/standup <your-project>/.claude/skills/
+```
+
+### 使い方
+
+Claude Code で以下のように呼び出します：
+
+```bash
+# 朝会（過去24時間の情報を収集）
+/standup morning
+
+# 夕会（過去10時間の情報を収集）
+/standup evening
+
+# 時間を指定
+/standup morning 48
+
+# 自然言語でもOK
+「朝会を始めましょう」
+「今日の振り返りをしたい」
+```
+
+### 前提条件
+
+| ツール | 用途 | インストール |
+|--------|------|-------------|
+| Git | コミット履歴・差分取得 | 通常インストール済み |
+| GitHub CLI (`gh`) | PR・Issue 取得 | `brew install gh` → `gh auth login` |
+
+---
+
+## MCP サーバーとしての使い方
+
+MCP サーバーとしても利用できます。Claude Desktop との連携が必要な場合はこちらをお使いください。
+
+### 提供される機能
+
+- **Tools**: `collect_standup_info` - リポジトリから朝会・夕会用の情報を収集
+- **Resources**: `standup://current` - 現在のディレクトリのスタンドアップ情報
+- **Prompts**: `morning-standup`（朝会）/ `evening-standup`（夕会）
 
 ## 必要なもの
 
