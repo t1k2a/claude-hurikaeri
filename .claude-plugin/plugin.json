@@ -1,0 +1,12 @@
+{
+  "name": "claude-hurikaeri",
+  "description": "GitHub の作業状況を収集して朝会・夕会を行う Claude Code スキル",
+  "version": "1.0.0",
+  "author": {
+    "name": "t1k2a"
+  },
+  "repository": "https://github.com/t1k2a/claude-hurikaeri",
+  "homepage": "https://github.com/t1k2a/claude-hurikaeri#readme",
+  "license": "MIT",
+  "keywords": ["standup", "scrum", "github", "朝会", "夕会"]
+}

@@ -9,7 +9,8 @@
   },
   "files": [
     "build",
-    ".claude/skills",
+    ".claude-plugin",
+    "skills",
     "README.md",
     "system_prompt.md"
   ],
@@ -35,7 +36,7 @@
     "scrum",
     "model-context-protocol"
   ],
-  "author": "",
+  "author": "t1k2a",
   "license": "MIT",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.4"
