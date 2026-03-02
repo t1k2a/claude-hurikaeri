@@ -104,7 +104,7 @@ gh auth login
 npm install -g claude-hurikaeri-mcp
 
 # または、このリポジトリから直接
-git clone https://github.com/your-username/claude-hurikaeri.git
+git clone https://github.com/t1k2a/claude-hurikaeri.git
 cd claude-hurikaeri
 npm install
 npm run build
