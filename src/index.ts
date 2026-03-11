@@ -20,10 +20,8 @@ interface StandupInfo {
   remoteUrl: string;
   sinceHours: number;
   commits: string;
-  commitDetails: string;
   diffStat: string;
-  diffContent: string;
-  stagedDiff: string;
+  openIssues: string;
   openPRs: string;
   mergedPRs: string;
   reviewPRs: string;
@@ -91,6 +89,7 @@ function collectStandupInfo(repoPath: string, sinceHours: number): StandupInfo {
   // Check if gh CLI is available
   const ghAvailable = isCommandAvailable("gh");
   let remoteUrl = "Unknown";
+  let openIssues = "";
   let openPRs = "";
   let mergedPRs = "";
   let reviewPRs = "";
@@ -107,36 +106,34 @@ function collectStandupInfo(repoPath: string, sinceHours: number): StandupInfo {
 
   const sinceDate = getSinceDate(sinceHours);
 
-  // Collect commit history
+  // Collect commit history (only messages)
   const commits = execCommand(
-    `git log --since="${sinceDate}" --oneline --no-merges`,
+    `git log --since="${sinceDate}" --oneline --no-merges --format="%s"`,
     absPath
   );
 
-  const commitDetails = execCommand(
-    `git log --since="${sinceDate}" --no-merges --stat --format="commit %h - %s (%ar)"`,
-    absPath
-  );
-
-  // Collect diff information
+  // Collect diff information (only stat to check if there are uncommitted changes)
   const diffStat = execCommand("git diff --stat", absPath);
-  const diffContent = execCommand("git diff | head -200", absPath);
-  const stagedDiff = execCommand("git diff --cached --stat", absPath);
 
-  // Collect PR information (requires gh CLI)
+  // Collect GitHub information (requires gh CLI)
   if (ghAvailable) {
+    openIssues = execCommand(
+      'gh issue list --assignee="@me" --state=open --json number,title --template \'{{range .}}- #{{.number}} {{.title}}\\n{{end}}\'',
+      absPath
+    );
+
     openPRs = execCommand(
-      'gh pr list --author="@me" --state=open --json number,title,updatedAt,url --template \'{{range .}}- #{{.number}} {{.title}} (更新: {{.updatedAt}})\\n  {{.url}}\\n{{end}}\'',
+      'gh pr list --author="@me" --state=open --json number,title --template \'{{range .}}- #{{.number}} {{.title}}\\n{{end}}\'',
       absPath
     );
 
     mergedPRs = execCommand(
-      'gh pr list --author="@me" --state=merged --limit 5 --json number,title,mergedAt,url --template \'{{range .}}- #{{.number}} {{.title}} (マージ: {{.mergedAt}})\\n  {{.url}}\\n{{end}}\'',
+      'gh pr list --author="@me" --state=merged --limit 5 --json number,title --template \'{{range .}}- #{{.number}} {{.title}}\\n{{end}}\'',
       absPath
     );
 
     reviewPRs = execCommand(
-      'gh pr list --search "review-requested:@me" --state=open --json number,title,author,url --template \'{{range .}}- #{{.number}} {{.title}} (by {{.author.login}})\\n  {{.url}}\\n{{end}}\'',
+      'gh pr list --search "review-requested:@me" --state=open --json number,title,author --template \'{{range .}}- #{{.number}} {{.title}} (by {{.author.login}})\\n{{end}}\'',
       absPath
     );
   }
@@ -147,10 +144,8 @@ function collectStandupInfo(repoPath: string, sinceHours: number): StandupInfo {
     remoteUrl,
     sinceHours,
     commits,
-    commitDetails,
     diffStat,
-    diffContent,
-    stagedDiff,
+    openIssues,
     openPRs,
     mergedPRs,
     reviewPRs,
@@ -162,64 +157,62 @@ function collectStandupInfo(repoPath: string, sinceHours: number): StandupInfo {
  * Format standup information as Markdown
  */
 function formatStandupMarkdown(info: StandupInfo): string {
-  const now = new Date().toLocaleString("ja-JP");
+  let markdown = "# 今日やったこと\n";
 
-  let markdown = `# 📋 スタンドアップ情報: ${info.repoName}
-- **日時**: ${now}
-- **ブランチ**: ${info.branch}
-- **リポジトリ**: ${info.remoteUrl}
-- **集計期間**: 過去 ${info.sinceHours} 時間
-
----
-
-## 📝 コミット履歴
-`;
-
-  if (!info.commits) {
-    markdown += "直近のコミットはありません。\n";
-  } else {
-    markdown += "```\n" + info.commits + "\n```\n\n";
-    markdown += "### 変更の詳細\n";
-    markdown += "```\n" + info.commitDetails + "\n```\n";
+  // Add commits
+  if (info.commits) {
+    const commitLines = info.commits.split("\n").filter((line) => line.trim());
+    commitLines.forEach((commit) => {
+      markdown += `- ${commit}\n`;
+    });
   }
 
-  markdown += "\n---\n\n## 🔀 コード差分（未コミットの変更）\n";
-
-  if (!info.diffStat) {
-    markdown += "未コミットの変更はありません。\n";
-  } else {
-    markdown += "```\n" + info.diffStat + "\n```\n\n";
-    markdown += "### 差分の内容（先頭200行）\n";
-    markdown += "```diff\n" + info.diffContent + "\n```\n";
+  // Add merged PRs
+  if (info.mergedPRs) {
+    const prLines = info.mergedPRs.split("\n").filter((line) => line.trim());
+    prLines.forEach((pr) => {
+      markdown += `- ${pr}\n`;
+    });
   }
 
-  if (info.stagedDiff) {
-    markdown += "\n### ステージ済みの変更\n";
-    markdown += "```\n" + info.stagedDiff + "\n```\n";
+  // Add uncommitted changes notice
+  if (info.diffStat) {
+    markdown += "- 作業中: 未コミットの変更あり\n";
   }
 
-  markdown += "\n---\n\n## 🔃 Pull Requests\n";
-
-  if (!info.ghAvailable) {
-    markdown += "⚠️ **GitHub CLI (`gh`) がインストールされていないため、PR情報を取得できませんでした。**\n\n";
-    markdown += "PR情報を表示するには以下をインストールしてください：\n";
-    markdown += "```bash\n";
-    markdown += "# macOS/Linux\n";
-    markdown += "brew install gh\n";
-    markdown += "gh auth login\n";
-    markdown += "\n";
-    markdown += "# または: https://cli.github.com/\n";
-    markdown += "```\n";
-  } else {
-    markdown += "### オープン中のPR（自分）\n";
-    markdown += info.openPRs || "オープン中のPRはありません。\n";
-    markdown += "\n### 最近マージされたPR\n";
-    markdown += info.mergedPRs || "最近マージされたPRはありません。\n";
-    markdown += "\n### レビュー依頼されているPR\n";
-    markdown += info.reviewPRs || "レビュー待ちのPRはありません。\n";
+  // If nothing was done today
+  if (!info.commits && !info.mergedPRs && !info.diffStat) {
+    markdown += "- \n";
   }
 
-  markdown += "\n---\n\n> このサマリーを Claude の会話に貼り付けて、音声モードで朝会・夕会を始めましょう！\n";
+  markdown += "\n# 明日やること\n";
+  markdown += "- \n";
+  markdown += "- \n";
+  markdown += "- \n";
+
+  // Add reference section only if there are open tasks
+  const hasOpenTasks = info.openIssues || info.openPRs || info.reviewPRs;
+
+  if (hasOpenTasks) {
+    markdown += "\n---\n\n## 参考: オープン中のタスク\n";
+
+    if (info.openIssues) {
+      markdown += "### 自分のIssue\n";
+      markdown += info.openIssues;
+      markdown += "\n";
+    }
+
+    if (info.openPRs) {
+      markdown += "### 自分のPR\n";
+      markdown += info.openPRs;
+      markdown += "\n";
+    }
+
+    if (info.reviewPRs) {
+      markdown += "### レビュー待ちのPR\n";
+      markdown += info.reviewPRs;
+    }
+  }
 
   return markdown;
 }

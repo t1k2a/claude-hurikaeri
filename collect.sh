@@ -28,121 +28,85 @@ REMOTE_URL=$(gh repo view --json url -q '.url' 2>/dev/null || echo "不明")
 # ファイル名: リポジトリ名_日付.md
 OUTPUT_FILE="${OUTPUT_DIR}/${REPO_NAME}_$(date '+%Y-%m-%d').md"
 
-cat > "$OUTPUT_FILE" << EOF
-# 📋 スタンドアップ情報: ${REPO_NAME}
-- **日時**: $(date "+%Y-%m-%d %H:%M")
-- **ブランチ**: ${BRANCH}
-- **リポジトリ**: ${REMOTE_URL}
-- **集計期間**: 過去 ${SINCE_HOURS} 時間
-
----
-
-## 📝 コミット履歴
+cat > "$OUTPUT_FILE" << 'EOF'
+# 今日やったこと
 EOF
 
 # --- コミット履歴 ---
-COMMITS=$(git log --since="$SINCE_DATE" --oneline --no-merges 2>/dev/null || true)
-if [ -z "$COMMITS" ]; then
-  echo "直近のコミットはありません。" >> "$OUTPUT_FILE"
-else
-  echo '```' >> "$OUTPUT_FILE"
-  echo "$COMMITS" >> "$OUTPUT_FILE"
-  echo '```' >> "$OUTPUT_FILE"
-  echo "" >> "$OUTPUT_FILE"
-
-  # 詳細（変更ファイル + stat）
-  echo "### 変更の詳細" >> "$OUTPUT_FILE"
-  echo '```' >> "$OUTPUT_FILE"
-  git log --since="$SINCE_DATE" --no-merges --stat --format="commit %h - %s (%ar)" >> "$OUTPUT_FILE" 2>/dev/null || true
-  echo '```' >> "$OUTPUT_FILE"
+COMMITS=$(git log --since="$SINCE_DATE" --oneline --no-merges --format="%s" 2>/dev/null || true)
+if [ -n "$COMMITS" ]; then
+  echo "$COMMITS" | while IFS= read -r line; do
+    echo "- $line" >> "$OUTPUT_FILE"
+  done
 fi
 
-# --- コードの差分サマリー ---
-cat >> "$OUTPUT_FILE" << 'EOF'
+# --- マージされたPR ---
+if command -v gh >/dev/null 2>&1; then
+  MERGED_PRS=$(gh pr list --author="@me" --state=merged --limit 5 --json number,title \
+    --template '{{range .}}- #{{.number}} {{.title}}{{"\n"}}{{end}}' 2>/dev/null || true)
+  if [ -n "$MERGED_PRS" ]; then
+    echo "$MERGED_PRS" >> "$OUTPUT_FILE"
+  fi
+fi
 
----
-
-## 🔀 コード差分（未コミットの変更）
-EOF
-
+# --- 未コミットの変更 ---
 DIFF_STAT=$(git diff --stat 2>/dev/null || true)
-if [ -z "$DIFF_STAT" ]; then
-  echo "未コミットの変更はありません。" >> "$OUTPUT_FILE"
-else
-  echo '```' >> "$OUTPUT_FILE"
-  echo "$DIFF_STAT" >> "$OUTPUT_FILE"
-  echo '```' >> "$OUTPUT_FILE"
-  echo "" >> "$OUTPUT_FILE"
-  echo "### 差分の内容（先頭200行）" >> "$OUTPUT_FILE"
-  echo '```diff' >> "$OUTPUT_FILE"
-  git diff | head -200 >> "$OUTPUT_FILE" 2>/dev/null || true
-  echo '```' >> "$OUTPUT_FILE"
+if [ -n "$DIFF_STAT" ]; then
+  echo "- 作業中: 未コミットの変更あり" >> "$OUTPUT_FILE"
 fi
 
-# --- ステージ済みの変更 ---
-STAGED=$(git diff --cached --stat 2>/dev/null || true)
-if [ -n "$STAGED" ]; then
-  cat >> "$OUTPUT_FILE" << 'EOF'
-
-### ステージ済みの変更
-EOF
-  echo '```' >> "$OUTPUT_FILE"
-  echo "$STAGED" >> "$OUTPUT_FILE"
-  echo '```' >> "$OUTPUT_FILE"
+# 何もない場合は空の箇条書き
+if [ -z "$COMMITS" ] && [ -z "$MERGED_PRS" ] && [ -z "$DIFF_STAT" ]; then
+  echo "- " >> "$OUTPUT_FILE"
 fi
 
-# --- Pull Requests ---
+# --- 明日やること ---
 cat >> "$OUTPUT_FILE" << 'EOF'
+
+# 明日やること
+-
+-
+-
+EOF
+
+# --- 参考: オープン中のタスク ---
+if command -v gh >/dev/null 2>&1; then
+  OPEN_ISSUES=$(gh issue list --assignee="@me" --state=open --json number,title \
+    --template '{{range .}}- #{{.number}} {{.title}}{{"\n"}}{{end}}' 2>/dev/null || true)
+
+  OPEN_PRS=$(gh pr list --author="@me" --state=open --json number,title \
+    --template '{{range .}}- #{{.number}} {{.title}}{{"\n"}}{{end}}' 2>/dev/null || true)
+
+  REVIEW_PRS=$(gh pr list --search "review-requested:@me" --state=open --json number,title,author \
+    --template '{{range .}}- #{{.number}} {{.title}} (by {{.author.login}}){{"\n"}}{{end}}' 2>/dev/null || true)
+
+  # 参考セクションを表示（データがある場合のみ）
+  if [ -n "$OPEN_ISSUES" ] || [ -n "$OPEN_PRS" ] || [ -n "$REVIEW_PRS" ]; then
+    cat >> "$OUTPUT_FILE" << 'EOF'
 
 ---
 
-## 🔃 Pull Requests
+## 参考: オープン中のタスク
 EOF
 
-# 自分が作成したオープンPR
-echo "### オープン中のPR（自分）" >> "$OUTPUT_FILE"
-MY_PRS=$(gh pr list --author="@me" --state=open --json number,title,updatedAt,url \
-  --template '{{range .}}- #{{.number}} {{.title}} (更新: {{.updatedAt}}){{"\n"}}  {{.url}}{{"\n"}}{{end}}' 2>/dev/null || echo "取得できませんでした（gh CLI の認証を確認してください）")
+    if [ -n "$OPEN_ISSUES" ]; then
+      echo "### 自分のIssue" >> "$OUTPUT_FILE"
+      echo "$OPEN_ISSUES" >> "$OUTPUT_FILE"
+      echo "" >> "$OUTPUT_FILE"
+    fi
 
-if [ -z "$MY_PRS" ]; then
-  echo "オープン中のPRはありません。" >> "$OUTPUT_FILE"
-else
-  echo "$MY_PRS" >> "$OUTPUT_FILE"
+    if [ -n "$OPEN_PRS" ]; then
+      echo "### 自分のPR" >> "$OUTPUT_FILE"
+      echo "$OPEN_PRS" >> "$OUTPUT_FILE"
+      echo "" >> "$OUTPUT_FILE"
+    fi
+
+    if [ -n "$REVIEW_PRS" ]; then
+      echo "### レビュー待ちのPR" >> "$OUTPUT_FILE"
+      echo "$REVIEW_PRS" >> "$OUTPUT_FILE"
+    fi
+  fi
 fi
-
-echo "" >> "$OUTPUT_FILE"
-
-# 最近マージされたPR
-echo "### 最近マージされたPR" >> "$OUTPUT_FILE"
-MERGED_PRS=$(gh pr list --author="@me" --state=merged --json number,title,mergedAt,url \
-  --limit 5 \
-  --template '{{range .}}- #{{.number}} {{.title}} (マージ: {{.mergedAt}}){{"\n"}}  {{.url}}{{"\n"}}{{end}}' 2>/dev/null || echo "取得できませんでした")
-
-if [ -z "$MERGED_PRS" ]; then
-  echo "最近マージされたPRはありません。" >> "$OUTPUT_FILE"
-else
-  echo "$MERGED_PRS" >> "$OUTPUT_FILE"
-fi
-
-# レビュー待ちのPR
-echo "" >> "$OUTPUT_FILE"
-echo "### レビュー依頼されているPR" >> "$OUTPUT_FILE"
-REVIEW_PRS=$(gh pr list --search "review-requested:@me" --state=open --json number,title,author,url \
-  --template '{{range .}}- #{{.number}} {{.title}} (by {{.author.login}}){{"\n"}}  {{.url}}{{"\n"}}{{end}}' 2>/dev/null || echo "取得できませんでした")
-
-if [ -z "$REVIEW_PRS" ]; then
-  echo "レビュー待ちのPRはありません。" >> "$OUTPUT_FILE"
-else
-  echo "$REVIEW_PRS" >> "$OUTPUT_FILE"
-fi
-
-# --- フッター ---
-cat >> "$OUTPUT_FILE" << 'EOF'
-
----
-
-> このサマリーを Claude の会話に貼り付けて、音声モードで朝会・夕会を始めましょう！
-EOF
 
 # --- クリップボードにコピー ---
 if command -v pbcopy &>/dev/null; then
