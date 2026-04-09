@@ -13,6 +13,8 @@ import {
 import { execSync } from "child_process";
 import { existsSync } from "fs";
 import { resolve, basename } from "path";
+import { collectClaudeHistory } from "./claude-history.js";
+import { collectGitCommits } from "./git-history.js";
 
 interface StandupInfo {
   repoName: string;
@@ -26,6 +28,7 @@ interface StandupInfo {
   mergedPRs: string;
   reviewPRs: string;
   ghAvailable: boolean;
+  claudeHistory: string;
 }
 
 /**
@@ -56,15 +59,6 @@ function isCommandAvailable(command: string): boolean {
   } catch (error) {
     return false;
   }
-}
-
-/**
- * Get since date string for git commands
- */
-function getSinceDate(hours: number): string {
-  const date = new Date();
-  date.setHours(date.getHours() - hours);
-  return date.toISOString();
 }
 
 /**
@@ -104,13 +98,8 @@ function collectStandupInfo(repoPath: string, sinceHours: number): StandupInfo {
     }
   }
 
-  const sinceDate = getSinceDate(sinceHours);
-
-  // Collect commit history (only messages)
-  const commits = execCommand(
-    `git log --since="${sinceDate}" --oneline --no-merges --format="%s"`,
-    absPath
-  );
+  // Collect commit history (current user only)
+  const commits = collectGitCommits(absPath, sinceHours);
 
   // Collect diff information (only stat to check if there are uncommitted changes)
   const diffStat = execCommand("git diff --stat", absPath);
@@ -138,6 +127,8 @@ function collectStandupInfo(repoPath: string, sinceHours: number): StandupInfo {
     );
   }
 
+  const claudeHistory = collectClaudeHistory(absPath, sinceHours);
+
   return {
     repoName,
     branch,
@@ -150,6 +141,7 @@ function collectStandupInfo(repoPath: string, sinceHours: number): StandupInfo {
     mergedPRs,
     reviewPRs,
     ghAvailable,
+    claudeHistory,
   };
 }
 
@@ -180,8 +172,17 @@ function formatStandupMarkdown(info: StandupInfo): string {
     markdown += "- 作業中: 未コミットの変更あり\n";
   }
 
+  // Add Claude conversation history
+  if (info.claudeHistory) {
+    const claudeLines = info.claudeHistory.split("\n").filter((line) => line.trim());
+    claudeLines.forEach((msg) => {
+      const truncated = msg.length > 100 ? msg.slice(0, 100) + "…" : msg;
+      markdown += `- [Claude] ${truncated}\n`;
+    });
+  }
+
   // If nothing was done today
-  if (!info.commits && !info.mergedPRs && !info.diffStat) {
+  if (!info.commits && !info.mergedPRs && !info.diffStat && !info.claudeHistory) {
     markdown += "- \n";
   }
 

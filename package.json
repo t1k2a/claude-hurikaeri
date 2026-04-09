@@ -17,7 +17,8 @@
   "scripts": {
     "build": "tsc",
     "watch": "tsc --watch",
-    "prepare": "npm run build"
+    "prepare": "npm run build",
+    "test": "npm run build && node --test build/claude-history.test.js build/git-history.test.js"
   },
   "repository": {
     "type": "git",
