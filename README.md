@@ -204,6 +204,33 @@ SINCE_HOURS=48 standup ~/projects/my-app
 1. claude.ai のプロジェクトを開く
 2. クリップボードの内容をペースト（Cmd+V）
 
+---
+
+## Agent Team スキルのインストール
+
+```bash
+mkdir -p ~/.claude/skills/agent-team/agents
+cp -r skills/agent-team/. ~/.claude/skills/agent-team/
+```
+
+### 使い方
+
+```bash
+# セッション開始時に起動（セッション中のみ有効）
+/agent-team start
+
+# 停止
+/agent-team stop
+
+# 一時停止（例: 24時間）
+/agent-team pause 24h
+
+# 状態確認
+/agent-team status
+```
+
+---
+
 ## 複数リポジトリの場合
 
 ### MCP 版
