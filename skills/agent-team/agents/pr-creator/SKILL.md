@@ -39,6 +39,11 @@ git push origin <ブランチ名> 2>&1
 
 PR を作成する：
 ```bash
+# ラベルが存在しない場合は作成する
+gh label create "agent-created" --color "#0075ca" --force 2>/dev/null || true
+```
+
+```bash
 gh pr create \
   --title "<### Issue から取得したタイトル>" \
   --body "## 概要
