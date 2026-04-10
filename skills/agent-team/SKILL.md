@@ -22,6 +22,8 @@ $ARGUMENTS を確認して動作を切り替える。
    mkdir -p ~/.claude/skills/agent-team/agents
    ```
 
+注意：前のセッションの CronJob はセッション終了時に自動無効化されている。control.md を上書きすることで古い cron_ids もリセットされる。
+
 2. control.md を以下の内容で書き込む（`pause_until` も null にリセットされる）：
    ```bash
    cat > ~/.claude/skills/agent-team/control.md << 'EOF'
@@ -62,9 +64,11 @@ $ARGUMENTS を確認して動作を切り替える。
 
 ### /agent-team stop
 
+ファイルが存在しない場合は「Agent team は未起動です。」と出力して終了する。
+
 1. `~/.claude/skills/agent-team/control.md` を Read ツールで読む。
 2. control.md の `enabled` を `false` に更新する（Edit ツールを使用）。
-3. control.md の `cron_ids` に記録された各 job ID で CronDelete を実行する（null でないものすべて）。
+3. cron_ids.dev, cron_ids.ops, cron_ids.business の各値を確認し、null でない場合のみ CronDelete を実行する。null の場合はスキップする。
 4. control.md の `cron_ids` をすべて `null` に更新する（Edit ツールを使用）。
 5. 以下を出力する：
    ```
@@ -75,7 +79,9 @@ $ARGUMENTS を確認して動作を切り替える。
 
 ### /agent-team pause <duration>
 
-1. `$ARGUMENTS` から duration を解析する（例: `pause 24h` → 24時間後、`pause 2d` → 2日後）。
+control.md が存在しない場合は「Agent team は未起動です。先に /agent-team start を実行してください。」と出力して終了する。
+
+1. `$ARGUMENTS` から duration を解析する。受け入れる単位: `m`（分）、`h`（時間）、`d`（日）。例: `pause 30m` → 30分後、`pause 24h` → 24時間後、`pause 2d` → 2日後。
 2. 現在時刻 + duration の ISO8601 形式の日時を計算する：
    ```bash
    # Linux の場合
@@ -118,6 +124,8 @@ CronJob IDs:
 ## オーケストレーターモード（Cron から `/agent-team _run <division>` で呼ばれる）
 
 ### 起動時チェック
+
+control.md が存在しない場合は「control.md が見つかりません。/agent-team start を実行してください。」と出力して終了する。
 
 1. `~/.claude/skills/agent-team/control.md` を Read ツールで読む。
 2. `enabled: false` の場合 → 「Agent team is disabled. 終了します。」と出力して終了。
