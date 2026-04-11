@@ -5,7 +5,8 @@ description: >
   Use when the user says "standup", "morning standup", "evening standup",
   "朝会", "夕会", "振り返り", "daily standup", or invokes /standup.
   Supports morning (plan the day) and evening (reflect on today) modes.
-argument-hint: "[morning|evening] [hours]"
+  Supports multiple repository paths as arguments.
+argument-hint: "[morning|evening] [hours] [repo_path1 repo_path2 ...]"
 ---
 
 # Standup Meeting Skill（朝会・夕会）
@@ -28,17 +29,46 @@ argument-hint: "[morning|evening] [hours]"
 - `morning 48` → 朝会モード、過去48時間
 - `evening 8` → 夕会モード、過去8時間
 - 引数なし → 朝会モード、過去24時間
+- `morning repo1 repo2 repo3` → 朝会モード、複数リポジトリを一括処理
+- `morning 48 repo1 repo2` → 朝会モード、過去48時間、複数リポジトリを一括処理
+- `morning /absolute/path/to/repo` → 朝会モード、絶対パス指定のリポジトリ
 
 解釈した結果：
 1. **モード**: `morning` または `evening`（デフォルト: `morning`）
 2. **時間**: 遡る時間数（morning デフォルト: 24、evening デフォルト: 10）
+3. **リポジトリリスト**: 数値以外の引数をリポジトリパスとして解釈する。指定がない場合は現在のディレクトリ（`.`）を使用する。
+
+リポジトリパスの解釈ルール：
+- 引数の中で `morning`/`evening`/`朝会`/`夕会` 以外の文字列、かつ数値でないものをリポジトリパスとして扱う
+- 例: `morning 24 ./repo1 /home/user/repo2` → モード: morning、時間: 24、リポジトリ: `./repo1`, `/home/user/repo2`
+- 例: `morning ./repo1 ./repo2` → モード: morning、時間: 24（デフォルト）、リポジトリ: `./repo1`, `./repo2`
 
 ## Step 1: リポジトリ情報を収集
 
-現在のディレクトリで以下のコマンドを順番に実行してください。
+リポジトリリストに含まれる **各リポジトリ** に対して以下の手順を繰り返してください。
 各コマンドが失敗した場合はスキップして次に進んでください。
 
+リポジトリパスが存在しない場合は、そのリポジトリをスキップし「⚠️ パス `<path>` は存在しないためスキップしました」と記録してください。
+
 **重要**: GitHub CLI (`gh`) がインストールされていない場合、PR情報は取得できませんが、Git 情報（コミット履歴、差分など）は正常に取得できます。
+
+### 各リポジトリに対して実行する手順
+
+リポジトリパス `<REPO_PATH>` に移動してから以下を実行してください：
+
+```bash
+# リポジトリの存在確認
+if [ ! -d "<REPO_PATH>" ]; then
+  echo "SKIP: パス <REPO_PATH> が存在しません"
+  exit 0
+fi
+cd "<REPO_PATH>"
+
+# リポジトリかどうか確認
+git rev-parse --show-toplevel 2>/dev/null || echo "SKIP: Git リポジトリではありません"
+```
+
+パスが有効な Git リポジトリの場合、以下を実行してください：
 
 ### 基本情報
 
@@ -102,7 +132,9 @@ gh pr list --search "review-requested:@me" --state=open --json number,title,auth
 
 ## Step 2: 収集した情報をまとめる
 
-以下の構成でマークダウンレポートを作成してください：
+リポジトリが1つの場合は従来のフォーマット、複数リポジトリの場合はリポジトリごとにセクションを分けたフォーマットでレポートを作成してください：
+
+### 単一リポジトリの場合（従来フォーマット）
 
 ```
 # 今日やったこと
@@ -131,10 +163,51 @@ gh pr list --search "review-requested:@me" --state=open --json number,title,auth
 - #3 PR タイトル (by ユーザー名)
 ```
 
+### 複数リポジトリの場合（リポジトリごとのセクション分け）
+
+```
+# スタンドアップレポート（複数リポジトリ）
+
+---
+
+## リポジトリ: <リポジトリ名1>
+> パス: <repo_path1> | ブランチ: <branch>
+
+### 今日やったこと
+- <コミットメッセージ1>
+- <マージされたPR>
+- 作業中: 未コミットの変更あり（該当する場合のみ）
+- （該当なし）（コミットも変更もない場合）
+
+### オープン中のPR・Issue
+（gh CLI が利用可能で該当データがある場合のみ）
+- PR #2 PR タイトル
+
+---
+
+## リポジトリ: <リポジトリ名2>
+> パス: <repo_path2> | ブランチ: <branch>
+
+### 今日やったこと
+- <コミットメッセージ>
+
+### オープン中のPR・Issue
+- （なし）
+
+---
+
+# 明日やること（全リポジトリ横断）
+-
+-
+-
+```
+
 **注意**:
 - 「今日やったこと」は自動生成（コミット、マージPR、未コミット変更）
 - 「明日やること」は空欄3行のみ（Step 3でユーザーに質問する）
+- 複数リポジトリの場合、「明日やること」は全体まとめとして最後に1つ記載する
 - 「参考: オープン中のタスク」はデータがある場合のみ表示
+- スキップされたリポジトリは「⚠️ `<path>` はスキップされました」として記録する
 
 ## Step 3: スタンドアップミーティングを実施
 
