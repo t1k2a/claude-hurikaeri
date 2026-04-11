@@ -159,6 +159,41 @@ gh pr list --search "review-requested:@me" --state=open --json number,title,auth
 
 **重要**: 「明日やること」セクションはユーザーの回答で埋めること。空欄のままにしないこと。
 
+## Step 4: 振り返り結果の共有（任意）
+
+スタンドアップミーティング完了後、ユーザーに「振り返り結果をクリップボードにコピーしますか？」と聞いてください。
+
+ユーザーが「はい」と答えた場合のみ、以下を実行:
+
+1. Step 2 で作成したレポートに Step 3 での対話内容を反映した最終版を作成（「明日やること」セクションをユーザーの回答で埋めた状態）
+
+2. 利用可能なコピーコマンドを確認:
+
+```bash
+command -v pbcopy >/dev/null 2>&1 && echo "pbcopy" || \
+command -v xclip >/dev/null 2>&1 && echo "xclip" || \
+command -v xsel >/dev/null 2>&1 && echo "xsel" || \
+command -v wl-copy >/dev/null 2>&1 && echo "wl-copy" || \
+(test -f /proc/version && grep -qi microsoft /proc/version && \
+  (command -v iconv >/dev/null 2>&1 && echo "clip.exe+iconv" || \
+   command -v powershell.exe >/dev/null 2>&1 && echo "clip.exe+powershell" || \
+   echo "none")) || \
+echo "none"
+```
+
+3. コマンドに応じてコピーを実行（内容はヒアドキュメントで渡す）:
+   - `pbcopy`: `pbcopy << 'EOF' ... EOF`
+   - `xclip`: `xclip -selection clipboard << 'EOF' ... EOF`
+   - `xsel`: `xsel --clipboard << 'EOF' ... EOF`
+   - `wl-copy`: `wl-copy << 'EOF' ... EOF`
+   - `clip.exe+iconv`: `iconv -t UTF-16LE << 'EOF' ... EOF | clip.exe`（UTF-16 LE に変換して渡すことで日本語の文字化けを防ぐ）
+   - `clip.exe+powershell`: `powershell.exe -Command "Set-Clipboard -Value @'\n...\n'@"`（PowerShell のヒアストリングで渡す）
+   - `none`: コピー不可。結果をコードブロックで表示し「手動でコピーしてください」と案内
+
+4. コピー成功時: 「振り返り結果をクリップボードにコピーしました ✅」と通知
+
+ユーザーが「いいえ」と答えた場合: 何もせずスタンドアップを終了する。
+
 ## コミュニケーションスタイル
 
 - 簡潔で自然な日本語で話す
