@@ -34,16 +34,19 @@ $ARGUMENTS を確認して動作を切り替える。
      dev: null
      ops: null
      business: null
+     leadership: null
    EOF
    ```
 
-3. CronCreate で3つのジョブを作成する：
+3. CronCreate で4つのジョブを作成する：
    - Dev Division: 毎時7分 (`7 * * * *`)
      - prompt: `/agent-team _run dev`
    - Ops Division: 15分ごと (`*/15 * * * *`)
      - prompt: `/agent-team _run ops`
    - Business Division: 毎週月曜9時7分 (`7 9 * * 1`)
      - prompt: `/agent-team _run business`
+   - Leadership Division: 毎日8時57分 (`57 8 * * *`)
+     - prompt: `/agent-team _run leadership`
 
 4. 各 CronCreate が返す job ID を control.md の `cron_ids` に書き込む。
    Read ツールで control.md を読んでから Edit ツールで各 cron_ids を更新する。
@@ -54,6 +57,7 @@ $ARGUMENTS を確認して動作を切り替える。
    - Dev Division: 毎時起動（Cron: 7 * * * *）
    - Ops Division: 15分ごと起動（Cron: */15 * * * *）
    - Business Division: 毎週月曜9:07起動（Cron: 7 9 * * 1）
+   - Leadership Division: 毎日9時頃起動（Cron: 57 8 * * *）
 
    注意: CronJob はこの Claude セッション内でのみ有効です。
    セッション再開時に /agent-team start を再実行してください。
@@ -68,7 +72,7 @@ $ARGUMENTS を確認して動作を切り替える。
 
 1. `~/.claude/skills/agent-team/control.md` を Read ツールで読む。
 2. control.md の `enabled` を `false` に更新する（Edit ツールを使用）。
-3. cron_ids.dev, cron_ids.ops, cron_ids.business の各値を確認し、null でない場合のみ CronDelete を実行する。null の場合はスキップする。
+3. cron_ids.dev, cron_ids.ops, cron_ids.business, cron_ids.leadership の各値を確認し、null でない場合のみ CronDelete を実行する。null の場合はスキップする。
 4. control.md の `cron_ids` をすべて `null` に更新する（Edit ツールを使用）。
 5. 以下を出力する：
    ```
@@ -112,6 +116,7 @@ CronJob IDs:
   Dev: [cron_ids.dev の値]
   Ops: [cron_ids.ops の値]
   Business: [cron_ids.business の値]
+  Leadership: [cron_ids.leadership の値]
 ```
 
 状態の判定：
@@ -158,5 +163,13 @@ control.md が存在しない場合は「control.md が見つかりません。/
 1. `~/.claude/skills/agent-team/agents/business-division/SKILL.md` を Read ツールで読む。
 2. そのプロンプト内容で Agent tool を起動する（subagent_type: general-purpose）。
 3. Business Division からの完了報告を出力する。
+
+### _run leadership（Leadership Division を実行）
+
+起動時チェックを通過後、以下を実行する：
+
+1. `~/.claude/skills/agent-team/agents/leadership-division/SKILL.md` を Read ツールで読む。
+2. そのプロンプト内容で Agent tool を起動する（subagent_type: general-purpose）。
+3. Leadership Division からの完了報告を出力する。
 
 ---
