@@ -285,6 +285,20 @@ A: Git リポジトリであれば使えます。GitHub 連携機能（PR、Issu
 
 ---
 
+## ロードマップ
+
+今後の予定機能は GitHub Issues で管理しています。
+
+- [複数リポジトリの一括スタンドアップ対応](https://github.com/t1k2a/claude-hurikaeri/issues/14)
+- [Slack / Discord 通知連携](https://github.com/t1k2a/claude-hurikaeri/issues/15)
+- [スタンドアップレポートの HTML/PDF エクスポート](https://github.com/t1k2a/claude-hurikaeri/issues/16)
+- [スタンドアップ履歴の検索・集計機能](https://github.com/t1k2a/claude-hurikaeri/issues/17)
+- [カスタムテンプレート対応](https://github.com/t1k2a/claude-hurikaeri/issues/18)
+
+[すべての予定機能を見る](https://github.com/t1k2a/claude-hurikaeri/issues?q=is%3Aopen+label%3Aenhancement)
+
+---
+
 ## 開発者向け
 
 ### ビルド
