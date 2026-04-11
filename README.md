@@ -204,6 +204,9 @@ SINCE_HOURS=48 standup ~/projects/my-app
 1. claude.ai のプロジェクトを開く
 2. クリップボードの内容をペースト（Cmd+V）
 
+---
+
+
 ## 複数リポジトリの場合
 
 ### MCP 版
