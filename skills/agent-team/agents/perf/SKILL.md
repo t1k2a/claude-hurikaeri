@@ -11,6 +11,8 @@ argument-hint: "<Monitor の ALERT 内容>"
 
 $ARGUMENTS（Monitor の ALERT 内容）を受け取り、パフォーマンス観点で分析する。
 
+$ARGUMENTS が空の場合は「ALERT 内容が渡されていません。Incident Agent から正しく呼び出してください。」と出力して終了する。
+
 ## Step 1: 問題の種類を判断する
 
 $ARGUMENTS を確認し、以下のどれに該当するか判断する：
@@ -28,7 +30,9 @@ git log --oneline --since="48 hours ago" --name-only 2>/dev/null | head -30
 直近の変更ファイルと ALERT 内容を照合し、ボトルネックの原因を特定する。
 該当ファイルは Read ツールで内容を確認する。
 
-## Step 3: 最適化提案をまとめる
+## Step 3: 最適化提案をまとめる（内部分析メモ）
+
+以下の形式で分析をまとめる（最終出力は Step 5 で行う）：
 
 ```
 ## Perf Agent 分析結果
@@ -50,10 +54,18 @@ git log --oneline --since="48 hours ago" --name-only 2>/dev/null | head -30
 ## Step 4: GitHub Issue を作成する（優先度が高または中の場合）
 
 ```bash
+# まず performance ラベルを作成（存在しない場合でも --force で無視）
+gh label create "performance" --color "#e11d48" --force 2>/dev/null || true
+
 gh issue create \
   --title "perf: <問題の概要>" \
   --body "<Step 3 の分析結果全文>" \
-  --label "agent-task,performance" 2>/dev/null || echo "gh not available - Issue 化をスキップ"
+  --label "agent-task,performance" 2>/dev/null \
+  || gh issue create \
+       --title "perf: <問題の概要>" \
+       --body "<Step 3 の分析結果全文>" \
+       --label "agent-task" 2>/dev/null \
+  || echo "gh not available - Issue 化をスキップ"
 ```
 
 ## Step 5: 結果を出力する

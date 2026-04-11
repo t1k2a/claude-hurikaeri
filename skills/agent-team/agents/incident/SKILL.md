@@ -22,17 +22,25 @@ $ARGUMENTS を確認し、問題の種類を判断する：
 
 ```bash
 git log --oneline --since="2 hours ago" --name-only 2>/dev/null | head -30
-grep -r "<エラーメッセージのキーワード>" --include="*.js" --include="*.ts" --include="*.py" \
+```
+
+次に、$ARGUMENTS のエラーメッセージからキーワード（例: "TypeError", "undefined", "ENOENT" など）を抽出し、そのキーワードで関連ファイルを検索する：
+
+```bash
+# <keyword> は $ARGUMENTS から抽出した実際のキーワードに置き換えて実行する
+grep -r "<keyword>" --include="*.js" --include="*.ts" --include="*.py" \
   --include="*.go" -l 2>/dev/null | head -5
 ```
 
 Read ツールで該当ファイルの問題箇所を確認し、修正方針を決める。
 
+Step 2 の調査結果（git log・grep で特定したファイル・確認した問題箇所）は後の Step 3b で Perf Agent に渡すために保持しておく。
+
 ## Step 3a: コードバグ系 → Coder Agent に修正依頼
 
 `~/.claude/skills/agent-team/agents/coder/SKILL.md` を Read ツールで読む。
 
-以下の形式の設計書を作成し、$ARGUMENTS として Coder Agent に渡す：
+以下の形式の設計書を作成し、Coder Agent に渡す：
 
 ```
 ## 実装設計書
@@ -60,24 +68,44 @@ fix/incident-<YYYYMMDD-HHMM>
 
 Agent tool で Coder Agent を起動する：
 - subagent_type: general-purpose
-- prompt: [coder/SKILL.md の内容] + "\n\n$ARGUMENTS: [上記設計書]"
+- prompt: Read ツールで読んだ coder/SKILL.md の内容全文を先頭に置き、その末尾に以下を追記する：
+  ```
+  $ARGUMENTS: [上記で作成した設計書の全文]
+  ```
 
 ## Step 3b: パフォーマンス系 → Perf Agent に分析依頼
 
 `~/.claude/skills/agent-team/agents/perf/SKILL.md` を Read ツールで読む。
 
-Monitor の ALERT 内容を $ARGUMENTS として Agent tool で Perf Agent を起動する：
+Monitor の ALERT 内容（$ARGUMENTS）と Step 2 の調査結果を合わせた内容を Perf Agent に渡す。Agent tool で起動する：
 - subagent_type: general-purpose
-- prompt: [perf/SKILL.md の内容] + "\n\n$ARGUMENTS: [ALERT 内容]"
+- prompt: Read ツールで読んだ perf/SKILL.md の内容全文を先頭に置き、その末尾に以下を追記する：
+  ```
+  $ARGUMENTS: [Monitor の ALERT 内容]
+
+  ## Step 2 調査メモ（Incident Agent による追加調査）
+  [Step 2 で確認した git log・grep 結果・ファイルの問題箇所]
+  ```
 
 ## Step 3c: インフラ系 → GitHub Issue を作成して終了
 
 ```bash
 gh issue create \
   --title "ops: インフラ異常検知 — <概要>" \
-  --body "## 検知内容\n\n<Monitor の ALERT 内容>\n\n## 調査メモ\n\n<Step 2 の調査結果>\n\n## 対応\n手動対応が必要です。" \
-  --label "needs-human,ops" 2>/dev/null || echo "gh not available"
+  --body "## 検知内容
+
+<Monitor の ALERT 内容>
+
+## 調査メモ
+
+<Step 2 の調査結果>
+
+## 対応
+手動対応が必要です。" \
+  --label "needs-human,ops" 2>/dev/null
 ```
+
+コマンドの標準出力に Issue URL が表示されるので、その URL を Step 4 の報告に使用する。gh が利用できない場合は「gh not available」と記録する。
 
 ## Step 4: 完了を報告する
 
@@ -115,6 +143,9 @@ Perf Agent に分析を依頼しました。
 
 ### ALERT 種別
 インフラ（手動対応必要）
+
+### 根本原因
+<調査結果>
 
 ### 対応
 GitHub Issue を作成しました: <Issue URL>
