@@ -326,47 +326,6 @@ Agent team started.
 - Leadership Division: 毎日 9:00 頃起動
 ```
 
-### 各 Division の役割とセットアップ
-
-#### Leadership Division（経営）
-
-毎日 8:57 に起動し、プロジェクトの KPI・健全性を評価してマネジメントレポートを生成します。
-
-```bash
-# 手動実行（Claude Code で）
-/agent-team _run leadership
-```
-
-#### Business Division（事業）
-
-毎週月曜 9:07 に起動し、Issue のトレンド分析やビジネスインサイトを生成します。
-
-```bash
-# 手動実行
-/agent-team _run business
-```
-
-#### Dev Division（開発）
-
-毎時 7 分に起動し、"agent-task" ラベルの付いた Issue を自動取得・実装・PR 作成まで行います。
-
-```bash
-# 手動実行
-/agent-team _run dev
-
-# Issue に agent-task ラベルを付けると自動処理される
-gh issue edit <番号> --add-label "agent-task"
-```
-
-#### Ops Division（運用）
-
-15 分ごとに起動し、リポジトリの監視・アラート対応・定期レポートを行います。
-
-```bash
-# 手動実行
-/agent-team _run ops
-```
-
 ### エージェントチームの制御
 
 ```bash
