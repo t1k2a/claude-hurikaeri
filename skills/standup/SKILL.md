@@ -5,7 +5,8 @@ description: >
   Use when the user says "standup", "morning standup", "evening standup",
   "朝会", "夕会", "振り返り", "daily standup", or invokes /standup.
   Supports morning (plan the day) and evening (reflect on today) modes.
-argument-hint: "[morning|evening] [hours]"
+  Supports --export html option to export the report as an HTML file.
+argument-hint: "[morning|evening] [hours] [--export html] [--open]"
 ---
 
 # Standup Meeting Skill（朝会・夕会）
@@ -28,10 +29,14 @@ argument-hint: "[morning|evening] [hours]"
 - `morning 48` → 朝会モード、過去48時間
 - `evening 8` → 夕会モード、過去8時間
 - 引数なし → 朝会モード、過去24時間
+- `--export html` → レポート生成後に HTML ファイルとしてエクスポートする
+- `--open` → エクスポート後にブラウザで自動オープンする（`--export html` と併用）
 
 解釈した結果：
 1. **モード**: `morning` または `evening`（デフォルト: `morning`）
 2. **時間**: 遡る時間数（morning デフォルト: 24、evening デフォルト: 10）
+3. **エクスポートフラグ**: `--export html` が含まれる場合は `html`（デフォルト: なし）
+4. **自動オープンフラグ**: `--open` が含まれる場合は `true`（デフォルト: `false`）
 
 ## Step 1: リポジトリ情報を収集
 
@@ -193,6 +198,146 @@ fi
 
 コピーに成功した場合は「📋 クリップボードにコピーしました」と出力してください。
 失敗した場合はエラーメッセージを表示してスキップしてください。
+
+## Step 5: HTML エクスポート（`--export html` オプション指定時のみ）
+
+`--export html` フラグが指定されている場合のみ、このステップを実行してください。
+
+### 5-1: 出力ファイルパスを決定する
+
+```bash
+EXPORT_DIR="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+EXPORT_TIMESTAMP="$(date +%Y%m%d-%H%M%S)"
+EXPORT_FILE="${EXPORT_FILE:-$EXPORT_DIR/standup-$EXPORT_TIMESTAMP.html}"
+```
+
+**注意**: `EXPORT_FILE` 環境変数が未設定の場合はリポジトリルートにタイムスタンプ付きのファイル名で生成します。
+`/tmp/standup-report.html` のような共有パスへのデフォルトは避けてください（上書きリスクがあるため）。
+
+### 5-2: HTML ファイルを生成する
+
+**重要**: `STANDUP_REPORT` 環境変数と `EXPORT_FILE` 環境変数をセットしてから `python3` を実行してください。
+`STANDUP_REPORT` が未設定・空の場合はエラーを出力して終了します。
+
+```bash
+python3 - <<'PYEOF'
+import sys, os, re, datetime
+
+report = os.environ.get('STANDUP_REPORT', '')
+export_file = os.environ.get('EXPORT_FILE', '')
+timestamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+# STANDUP_REPORT が空の場合はエラーで終了する
+if not report.strip():
+    print('エラー: STANDUP_REPORT 環境変数が未設定または空です。', file=sys.stderr)
+    print('使用方法: STANDUP_REPORT="<レポート内容>" EXPORT_FILE="<出力先パス>" python3 ...', file=sys.stderr)
+    sys.exit(1)
+
+# EXPORT_FILE が未設定の場合は安全なデフォルトを使用する
+if not export_file.strip():
+    print('警告: EXPORT_FILE 環境変数が未設定です。カレントディレクトリに保存します。', file=sys.stderr)
+    export_file = os.path.join(os.getcwd(), f'standup-{datetime.datetime.now().strftime("%Y%m%d-%H%M%S")}.html')
+
+# マークダウンを簡易 HTML に変換する
+def md_to_html(text):
+    lines = text.split('\n')
+    html_lines = []
+    in_list = False
+    for line in lines:
+        if line.startswith('# '):
+            if in_list:
+                html_lines.append('</ul>')
+                in_list = False
+            html_lines.append(f'<h1>{line[2:]}</h1>')
+        elif line.startswith('## '):
+            if in_list:
+                html_lines.append('</ul>')
+                in_list = False
+            html_lines.append(f'<h2>{line[3:]}</h2>')
+        elif line.startswith('### '):
+            if in_list:
+                html_lines.append('</ul>')
+                in_list = False
+            html_lines.append(f'<h3>{line[4:]}</h3>')
+        elif line.startswith('- '):
+            if not in_list:
+                html_lines.append('<ul>')
+                in_list = True
+            html_lines.append(f'<li>{line[2:]}</li>')
+        elif line.strip() == '---':
+            if in_list:
+                html_lines.append('</ul>')
+                in_list = False
+            html_lines.append('<hr>')
+        elif line.strip() == '':
+            if in_list:
+                html_lines.append('</ul>')
+                in_list = False
+            html_lines.append('')
+        else:
+            if in_list:
+                html_lines.append('</ul>')
+                in_list = False
+            html_lines.append(f'<p>{line}</p>')
+    if in_list:
+        html_lines.append('</ul>')
+    return '\n'.join(html_lines)
+
+body_html = md_to_html(report)
+
+html = f"""<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>スタンドアップレポート {timestamp}</title>
+  <style>
+    body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 800px; margin: 40px auto; padding: 0 20px; color: #333; line-height: 1.6; }}
+    h1 {{ color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 8px; }}
+    h2 {{ color: #34495e; border-bottom: 1px solid #bdc3c7; padding-bottom: 4px; }}
+    h3 {{ color: #7f8c8d; }}
+    ul {{ padding-left: 1.5em; }}
+    li {{ margin: 4px 0; }}
+    hr {{ border: none; border-top: 1px solid #ecf0f1; margin: 20px 0; }}
+    .meta {{ color: #95a5a6; font-size: 0.85em; margin-bottom: 24px; }}
+  </style>
+</head>
+<body>
+  <div class="meta">生成日時: {timestamp}</div>
+  {body_html}
+</body>
+</html>"""
+
+with open(export_file, 'w', encoding='utf-8') as f:
+    f.write(html)
+print(f'exported:{export_file}')
+PYEOF
+```
+
+出力に `exported:` が含まれる場合はエクスポート成功として `EXPORT_FILE` を取得し、
+「📄 HTML レポートを保存しました: `<パス>`」と出力してください。
+失敗した場合はエラーメッセージを表示してスキップしてください。
+
+### 5-3: ブラウザで自動オープンする（`--open` オプション指定時のみ）
+
+`--open` フラグが指定されている場合のみ実行します：
+
+```bash
+# OS に応じてブラウザを開くコマンドを選択する
+if command -v xdg-open >/dev/null 2>&1; then
+  xdg-open "$EXPORT_FILE"
+elif command -v open >/dev/null 2>&1; then
+  open "$EXPORT_FILE"
+elif command -v explorer.exe >/dev/null 2>&1; then
+  # WSL
+  WINDOWS_PATH=$(wslpath -w "$EXPORT_FILE")
+  explorer.exe "$WINDOWS_PATH"
+else
+  echo "ブラウザを自動オープンできません。ファイルを手動で開いてください: $EXPORT_FILE"
+fi
+```
+
+「🌐 ブラウザでレポートを開きました」と出力してください。
 
 ## コミュニケーションスタイル
 
