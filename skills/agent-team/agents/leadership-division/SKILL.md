@@ -2,7 +2,7 @@
 name: agent-team-leadership
 description: >
   Leadership Division orchestrator. PM Agent → 経営 Agent → PM Agent(post_report) の
-  順で自律実行する。Chief Orchestrator か Agent tool で呼ばれる。
+  順で自律実行する。Chief Orchestrator から Agent tool で呼ばれる。
 ---
 
 # Leadership Division
