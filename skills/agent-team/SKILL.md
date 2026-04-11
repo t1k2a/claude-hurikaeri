@@ -145,10 +145,11 @@ control.md が存在しない場合は「control.md が見つかりません。/
 
 ### _run ops（Ops Division を実行）
 
-起動時チェックを通過後、以下を出力して終了：
-```
-[Ops Division] PLACEHOLDER - Plan 3 で実装予定
-```
+起動時チェックを通過後、以下を実行する：
+
+1. `~/.claude/skills/agent-team/agents/ops-division/SKILL.md` を Read ツールで読む。
+2. そのプロンプト内容で Agent tool を起動する（subagent_type: general-purpose）。
+3. Ops Division からの完了報告を出力する。
 
 ### _run business（Business Division を実行）
 
