@@ -49,6 +49,7 @@ ss -tlnp 2>/dev/null | grep -E "3000|8080|8000" | head -5
 以下の条件のいずれかに該当する場合は ALERT を報告する：
 - テストが失敗している（exit code != 0）
 - エラーログに "error", "exception", "fatal" が含まれる
+- エラーログファイルが存在し、サイズが 0 より大きい（`[ -s error.log ]` 等で確認）
 - 直近1時間のコミットに "fix:", "hotfix:", "revert:" が含まれる
 
 **CLEAN の場合:**
