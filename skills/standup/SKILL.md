@@ -5,7 +5,8 @@ description: >
   Use when the user says "standup", "morning standup", "evening standup",
   "朝会", "夕会", "振り返り", "daily standup", or invokes /standup.
   Supports morning (plan the day) and evening (reflect on today) modes.
-argument-hint: "[morning|evening] [hours]"
+  Supports --notify option to post the report to Slack/Discord via Webhook URL.
+argument-hint: "[morning|evening] [hours] [--notify]"
 ---
 
 # Standup Meeting Skill（朝会・夕会）
@@ -28,10 +29,12 @@ argument-hint: "[morning|evening] [hours]"
 - `morning 48` → 朝会モード、過去48時間
 - `evening 8` → 夕会モード、過去8時間
 - 引数なし → 朝会モード、過去24時間
+- `--notify` → レポート完了後に Slack/Discord Webhook に投稿する
 
 解釈した結果：
 1. **モード**: `morning` または `evening`（デフォルト: `morning`）
 2. **時間**: 遡る時間数（morning デフォルト: 24、evening デフォルト: 10）
+3. **通知フラグ**: `--notify` が含まれる場合は `true`（デフォルト: `false`）
 
 ## Step 1: リポジトリ情報を収集
 
@@ -193,6 +196,70 @@ fi
 
 コピーに成功した場合は「📋 クリップボードにコピーしました」と出力してください。
 失敗した場合はエラーメッセージを表示してスキップしてください。
+
+## Step 5: Webhook 通知（`--notify` オプション指定時のみ）
+
+`--notify` フラグが指定されている場合のみ、このステップを実行してください。
+
+### セキュリティ上の注意
+
+> **重要**: Webhook URL は機密情報です。以下のガイドラインに従ってください：
+> - **環境変数 `STANDUP_WEBHOOK_URL` を推奨**（設定ファイルより安全）
+> - 設定ファイル `.standup-config.json` を使う場合は必ず `.gitignore` に追加すること
+> - Webhook URL をコードやドキュメントに直接記述しないこと
+
+### 5-1: Webhook URL を取得する（環境変数優先）
+
+```bash
+# まず環境変数を確認する（推奨）
+WEBHOOK_URL="${STANDUP_WEBHOOK_URL:-}"
+
+# 環境変数が未設定の場合、設定ファイルにフォールバックする
+if [ -z "$WEBHOOK_URL" ]; then
+  CONFIG_FILE="$(git rev-parse --show-toplevel 2>/dev/null || pwd)/.standup-config.json"
+  if [ -f "$CONFIG_FILE" ]; then
+    WEBHOOK_URL="$(python3 -c "import json,sys; d=json.load(open('$CONFIG_FILE')); print(d.get('webhookUrl',''))" 2>/dev/null || echo "")"
+  fi
+fi
+
+if [ -z "$WEBHOOK_URL" ]; then
+  echo "警告: Webhook URL が設定されていません。通知をスキップします。"
+  echo "設定方法: export STANDUP_WEBHOOK_URL='https://hooks.slack.com/...' または .standup-config.json を作成してください。"
+  echo "注意: .standup-config.json を使う場合は .gitignore に追加することを忘れずに。"
+  exit 0
+fi
+```
+
+### 5-2: Webhook に POST する
+
+```bash
+# JSON ペイロードを作成して POST する
+PAYLOAD=$(python3 -c "
+import json, os
+report = os.environ.get('STANDUP_REPORT', '')
+print(json.dumps({'text': report}))
+" 2>/dev/null)
+
+curl -s -X POST \
+  -H 'Content-Type: application/json' \
+  -d "$PAYLOAD" \
+  "$WEBHOOK_URL" \
+  && echo "通知を送信しました" \
+  || echo "警告: Webhook への送信に失敗しました"
+```
+
+### 設定ファイル `.standup-config.json` の例（使用する場合）
+
+```json
+{
+  "webhookUrl": "https://hooks.slack.com/services/YOUR/WEBHOOK/URL"
+}
+```
+
+**必ず `.gitignore` に `.standup-config.json` を追加してください：**
+```bash
+echo '.standup-config.json' >> .gitignore
+```
 
 ## コミュニケーションスタイル
 
