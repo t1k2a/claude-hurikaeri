@@ -5,7 +5,8 @@ description: >
   Use when the user says "standup", "morning standup", "evening standup",
   "朝会", "夕会", "振り返り", "daily standup", or invokes /standup.
   Supports morning (plan the day) and evening (reflect on today) modes.
-argument-hint: "[morning|evening] [hours]"
+  Supports --template option to customize the report format with a Markdown template.
+argument-hint: "[morning|evening] [hours] [--template <path>]"
 ---
 
 # Standup Meeting Skill（朝会・夕会）
@@ -28,10 +29,12 @@ argument-hint: "[morning|evening] [hours]"
 - `morning 48` → 朝会モード、過去48時間
 - `evening 8` → 夕会モード、過去8時間
 - 引数なし → 朝会モード、過去24時間
+- `--template <path>` → 指定した Markdown テンプレートファイルをレポートフォーマットとして使用する（省略時はデフォルトフォーマットを使用）
 
 解釈した結果：
 1. **モード**: `morning` または `evening`（デフォルト: `morning`）
 2. **時間**: 遡る時間数（morning デフォルト: 24、evening デフォルト: 10）
+3. **テンプレートパス**: `--template <path>` が含まれる場合はそのパス（デフォルト: なし）
 
 ## Step 1: リポジトリ情報を収集
 
@@ -102,7 +105,29 @@ gh pr list --search "review-requested:@me" --state=open --json number,title,auth
 
 ## Step 2: 収集した情報をまとめる
 
-以下の構成でマークダウンレポートを作成してください：
+### 2-0: カスタムテンプレートの読み込み（`--template` 指定時のみ）
+
+`--template <path>` が指定されている場合、テンプレートファイルを読み込んでレポートフォーマットとして使用します：
+
+```bash
+TEMPLATE_PATH="<--template で指定されたパス>"
+if [ -f "$TEMPLATE_PATH" ]; then
+  TEMPLATE_CONTENT=$(cat "$TEMPLATE_PATH")
+  echo "テンプレートを読み込みました: $TEMPLATE_PATH"
+else
+  echo "警告: テンプレートファイルが見つかりません: $TEMPLATE_PATH — デフォルトフォーマットを使用します。"
+  TEMPLATE_CONTENT=""
+fi
+```
+
+テンプレートファイルが正常に読み込めた場合は、下記のデフォルトフォーマットの代わりにテンプレートの内容をレポート構造として使用してください。
+テンプレートが読み込めなかった場合はデフォルトフォーマットを使用してください。
+
+デフォルトテンプレートのサンプルは `skills/standup/default-template.md` にあります。
+
+### 2-1: レポートを作成する
+
+以下の構成でマークダウンレポートを作成してください（カスタムテンプレートが指定された場合はその構成に従う）：
 
 ```
 # 今日やったこと
@@ -135,6 +160,7 @@ gh pr list --search "review-requested:@me" --state=open --json number,title,auth
 - 「今日やったこと」は自動生成（コミット、マージPR、未コミット変更）
 - 「明日やること」は空欄3行のみ（Step 3でユーザーに質問する）
 - 「参考: オープン中のタスク」はデータがある場合のみ表示
+- カスタムテンプレート使用時はテンプレートの構成を優先し、収集した情報を適切なセクションに埋め込む
 
 ## Step 3: スタンドアップミーティングを実施
 
