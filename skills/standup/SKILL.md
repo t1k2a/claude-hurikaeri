@@ -179,13 +179,9 @@ elif command -v xsel >/dev/null 2>&1; then
   # X11 (代替)
   echo "$STANDUP_REPORT" | xsel --clipboard --input
 elif command -v clip.exe >/dev/null 2>&1; then
-  # WSL: clip.exe は UTF-16 LE を期待するため iconv で変換する
-  if command -v iconv >/dev/null 2>&1; then
-    echo "$STANDUP_REPORT" | iconv -t UTF-16LE | clip.exe
-  else
-    # iconv がない場合は PowerShell 経由でコピー
-    echo "$STANDUP_REPORT" | powershell.exe -Command "& { \$input | Set-Clipboard }"
-  fi
+  # WSL: PowerShell の Set-Clipboard を使って UTF-8 のままコピーする
+  # （clip.exe に直接パイプすると UTF-16LE 変換で文字化けするため使わない）
+  echo "$STANDUP_REPORT" | powershell.exe -Command "& { \$input | Set-Clipboard }"
 else
   echo "クリップボードコマンドが見つかりません。手動でコピーしてください。"
 fi
