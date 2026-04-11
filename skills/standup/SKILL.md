@@ -5,7 +5,8 @@ description: >
   Use when the user says "standup", "morning standup", "evening standup",
   "朝会", "夕会", "振り返り", "daily standup", or invokes /standup.
   Supports morning (plan the day) and evening (reflect on today) modes.
-argument-hint: "[morning|evening] [hours]"
+  Supports --notify option to post the report to Slack or Discord via Webhook.
+argument-hint: "[morning|evening] [hours] [--notify]"
 ---
 
 # Standup Meeting Skill（朝会・夕会）
@@ -28,10 +29,12 @@ argument-hint: "[morning|evening] [hours]"
 - `morning 48` → 朝会モード、過去48時間
 - `evening 8` → 夕会モード、過去8時間
 - 引数なし → 朝会モード、過去24時間
+- `--notify` → レポート生成後に Slack/Discord Webhook へ通知を送信する
 
 解釈した結果：
 1. **モード**: `morning` または `evening`（デフォルト: `morning`）
 2. **時間**: 遡る時間数（morning デフォルト: 24、evening デフォルト: 10）
+3. **通知フラグ**: `--notify` が含まれる場合は `true`（デフォルト: `false`）
 
 ## Step 1: リポジトリ情報を収集
 
@@ -193,6 +196,68 @@ fi
 
 コピーに成功した場合は「📋 クリップボードにコピーしました」と出力してください。
 失敗した場合はエラーメッセージを表示してスキップしてください。
+
+## Step 5: Slack / Discord へ通知する（`--notify` オプション指定時のみ）
+
+`--notify` フラグが指定されている場合のみ、このステップを実行してください。
+
+### 5-1: 設定ファイルから Webhook URL を読み込む
+
+現在のリポジトリルートにある `.standup-config.json` を読み込みます：
+
+```bash
+CONFIG_FILE="$(git rev-parse --show-toplevel 2>/dev/null)/.standup-config.json"
+if [ -f "$CONFIG_FILE" ]; then
+  WEBHOOK_URL=$(cat "$CONFIG_FILE" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('webhookUrl',''))" 2>/dev/null)
+fi
+```
+
+`.standup-config.json` のサンプル形式：
+```json
+{
+  "webhookUrl": "https://hooks.slack.com/services/XXX/YYY/ZZZ",
+  "messageFormat": "text"
+}
+```
+
+- `webhookUrl`: Slack の Incoming Webhook URL または Discord の Webhook URL
+- `messageFormat`: `"text"`（デフォルト）または `"discord"`
+
+### 5-2: Webhook へ POST する
+
+Webhook URL が取得できた場合、`curl` でレポートを送信します：
+
+```bash
+# Step 2 で作成したレポートテキストを使用する
+NOTIFY_TEXT="$STANDUP_REPORT"
+
+if [ -z "$WEBHOOK_URL" ]; then
+  echo "⚠️ Webhook URL が設定されていません。.standup-config.json に webhookUrl を設定してください。通知をスキップします。"
+else
+  # Slack / Discord 共通: JSON ペイロードを構築して送信
+  # テキストをエスケープして JSON に埋め込む
+  ESCAPED_TEXT=$(echo "$NOTIFY_TEXT" | python3 -c "import sys,json; print(json.dumps(sys.stdin.read()))")
+
+  if [ "$MESSAGE_FORMAT" = "discord" ]; then
+    PAYLOAD="{\"content\": $ESCAPED_TEXT}"
+  else
+    # Slack 形式（デフォルト）
+    PAYLOAD="{\"text\": $ESCAPED_TEXT}"
+  fi
+
+  HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+    -X POST \
+    -H "Content-Type: application/json" \
+    -d "$PAYLOAD" \
+    "$WEBHOOK_URL")
+
+  if [ "$HTTP_STATUS" -ge 200 ] && [ "$HTTP_STATUS" -lt 300 ]; then
+    echo "✅ Webhook に通知を送信しました（HTTP $HTTP_STATUS）"
+  else
+    echo "❌ Webhook への通知に失敗しました（HTTP $HTTP_STATUS）。Webhook URL を確認してください。"
+  fi
+fi
+```
 
 ## コミュニケーションスタイル
 
