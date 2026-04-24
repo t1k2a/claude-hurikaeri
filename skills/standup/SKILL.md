@@ -28,7 +28,7 @@ argument-hint: "[morning|evening] [hours] [--save] [--search <keyword>] [--summa
 - `morning 48` → 朝会モード、過去48時間
 - `evening 8` → 夕会モード、過去8時間
 - 引数なし → 朝会モード、過去24時間
-- `--save` → スタンドアップレポートを `~/.standup-history/YYYY-MM-DD.json` に保存する
+- `--save` → スタンドアップレポートを `/home/joji/.standup-history/YYYY-MM-DD-morning-<repo>.json` または `YYYY-MM-DD-evening-<repo>.json` に保存する
 - `--search <keyword>` → 過去のスタンドアップ履歴からキーワード検索して結果を表示する（朝会・夕会は実施しない）
 - `--summary weekly` → 過去7日分のスタンドアップ履歴を週次サマリーとして集計・表示する（朝会・夕会は実施しない）
 - `--summary monthly` → 過去30日分のスタンドアップ履歴を月次サマリーとして集計・表示する（朝会・夕会は実施しない）
@@ -168,75 +168,69 @@ gh pr list --search "review-requested:@me" --state=open --json number,title,auth
 
 **重要**: 「明日やること」セクションはユーザーの回答で埋めること。空欄のままにしないこと。
 
-## Step 4: 振り返り結果をクリップボードにコピーする
+## Step 4: レポートをエクスポートしてクリップボードにコピーする
 
-Step 2 で作成したマークダウンレポートをクリップボードにコピーします。
-環境に応じて以下のコマンドを使い分けてください：
+Step 2 で作成したマークダウンレポートを `export REPORT` で環境変数にセットし、クリップボードにコピーします。
+
+以下の bash コマンドを実行してください。`<レポート全文>` を Step 2 で作成したレポートに置き換え、`<モード>` を `morning` または `evening` に置き換えてください：
 
 ```bash
-# 利用可能なクリップボードコマンドを検出する
+export REPORT='<レポート全文>'
+export STANDUP_MODE='<モード>'
+export STANDUP_REPO=$(basename "$(git rev-parse --show-toplevel 2>/dev/null || echo unknown)")
 if command -v pbcopy >/dev/null 2>&1; then
-  # macOS
-  echo "$STANDUP_REPORT" | pbcopy
+  printf '%s' "$REPORT" | pbcopy && echo "📋 クリップボードにコピーしました"
 elif command -v wl-copy >/dev/null 2>&1; then
-  # Wayland
-  echo "$STANDUP_REPORT" | wl-copy
+  printf '%s' "$REPORT" | wl-copy && echo "📋 クリップボードにコピーしました"
 elif command -v xclip >/dev/null 2>&1; then
-  # X11
-  echo "$STANDUP_REPORT" | xclip -selection clipboard
+  printf '%s' "$REPORT" | xclip -selection clipboard && echo "📋 クリップボードにコピーしました"
 elif command -v xsel >/dev/null 2>&1; then
-  # X11 (代替)
-  echo "$STANDUP_REPORT" | xsel --clipboard --input
+  printf '%s' "$REPORT" | xsel --clipboard --input && echo "📋 クリップボードにコピーしました"
 elif command -v clip.exe >/dev/null 2>&1; then
-  # WSL: clip.exe は UTF-16 LE を期待するため iconv で変換する
   if command -v iconv >/dev/null 2>&1; then
-    echo "$STANDUP_REPORT" | iconv -t UTF-16LE | clip.exe
+    printf '%s' "$REPORT" | iconv -t UTF-16LE | clip.exe && echo "📋 クリップボードにコピーしました"
   else
-    # iconv がない場合は PowerShell 経由でコピー
-    echo "$STANDUP_REPORT" | powershell.exe -Command "& { \$input | Set-Clipboard }"
+    printf '%s' "$REPORT" | powershell.exe -Command "& { \$input | Set-Clipboard }" && echo "📋 クリップボードにコピーしました"
   fi
 else
   echo "クリップボードコマンドが見つかりません。手動でコピーしてください。"
 fi
 ```
 
-コピーに成功した場合は「📋 クリップボードにコピーしました」と出力してください。
-失敗した場合はエラーメッセージを表示してスキップしてください。
-
 ## Step 5: スタンドアップ履歴を保存する（`--save` 指定時のみ）
 
-`--save` が指定されている場合、Step 2 で作成したマークダウンレポートを JSON 形式で保存します。
+`--save` が指定されている場合、Step 4 で export した `$REPORT` 変数を使って履歴を保存します。
+Step 4 と同じ bash 呼び出し内に続けて実行してください（`$REPORT` が参照できる状態で実行すること）。
 
 ```bash
 python3 - <<'EOF'
-import os, json, sys
+import json, os
 from datetime import date
 
-report = os.environ.get('STANDUP_REPORT', '')
+report = os.environ.get('REPORT', '')
 if not report:
-    print("警告: STANDUP_REPORT が空です。保存をスキップします。", file=sys.stderr)
-    sys.exit(0)
+    print("エラー: REPORT 変数が空です。Step 4 で export REPORT を実行してください。")
+    exit(1)
 
-history_dir = os.path.expanduser('~/.standup-history')
-os.makedirs(history_dir, exist_ok=True)
-
+mode = os.environ.get('STANDUP_MODE', 'morning')  # 'morning' or 'evening'
+repo = os.environ.get('STANDUP_REPO', 'unknown')
 today = date.today().isoformat()
-filepath = os.path.join(history_dir, f'{today}.json')
-
-entry = {
-    'date': today,
-    'report': report
-}
+history_dir = '/home/joji/.standup-history'
+os.makedirs(history_dir, exist_ok=True)
+filepath = os.path.join(history_dir, f'{today}-{mode}-{repo}.json')
 
 with open(filepath, 'w', encoding='utf-8') as f:
-    json.dump(entry, f, ensure_ascii=False, indent=2)
+    json.dump({'date': today, 'mode': mode, 'repo': repo, 'report': report}, f, ensure_ascii=False, indent=2)
 
-print(f"💾 スタンドアップ履歴を保存しました: {filepath}")
+print(f'💾 スタンドアップ履歴を保存しました: {filepath}')
 EOF
 ```
 
-保存に成功した場合は「💾 スタンドアップ履歴を保存しました: <パス>」と出力してください。
-失敗した場合はエラーメッセージを表示してスキップしてください。
+**重要**:
+- Step 4 の `export REPORT=...` と同じ箇所で `export STANDUP_MODE=morning`（または `evening`）もセットすること
+- 保存後のメッセージには必ず保存先のフルパスを含めること
+- 正しい例: `💾 スタンドアップ履歴を保存しました: /home/joji/.standup-history/2026-04-25-morning-claude-hurikaeri.json`
+- NG例: `💾 履歴に保存しました（同日上書き、合計1件）`（パスなし・ファイル名なしは不可）
 
 ## Step 6: 履歴を検索する（`--search <keyword>` 指定時のみ）
 
@@ -249,7 +243,7 @@ python3 - <<EOF
 import os, json, glob
 
 keyword = """${SEARCH_KEYWORD}"""
-history_dir = os.path.expanduser('~/.standup-history')
+history_dir = '/home/joji/.standup-history'
 
 if not os.path.isdir(history_dir):
     print(f"履歴ディレクトリが見つかりません: {history_dir}")
@@ -294,7 +288,7 @@ import os, json, glob, re
 from datetime import date, timedelta
 
 period = """${SUMMARY_PERIOD}"""
-history_dir = os.path.expanduser('~/.standup-history')
+history_dir = '/home/joji/.standup-history'
 
 if not os.path.isdir(history_dir):
     print(f"履歴ディレクトリが見つかりません: {history_dir}")
