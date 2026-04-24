@@ -28,7 +28,7 @@ argument-hint: "[morning|evening] [hours] [--save] [--search <keyword>] [--summa
 - `morning 48` → 朝会モード、過去48時間
 - `evening 8` → 夕会モード、過去8時間
 - 引数なし → 朝会モード、過去24時間
-- `--save` → スタンドアップレポートを `/home/joji/.standup-history/YYYY-MM-DD-morning-<repo>.json` または `YYYY-MM-DD-evening-<repo>.json` に保存する
+- `--save` → スタンドアップレポートを `~/.standup-history/YYYY-MM-DD-morning-<repo>.json` または `~/.standup-history/YYYY-MM-DD-evening-<repo>.json` に保存する（`~` はそのユーザーの HOME ディレクトリ）
 - `--search <keyword>` → 過去のスタンドアップ履歴からキーワード検索して結果を表示する（朝会・夕会は実施しない）
 - `--summary weekly` → 過去7日分のスタンドアップ履歴を週次サマリーとして集計・表示する（朝会・夕会は実施しない）
 - `--summary monthly` → 過去30日分のスタンドアップ履歴を月次サマリーとして集計・表示する（朝会・夕会は実施しない）
@@ -215,7 +215,7 @@ if not report:
 mode = os.environ.get('STANDUP_MODE', 'morning')  # 'morning' or 'evening'
 repo = os.environ.get('STANDUP_REPO', 'unknown')
 today = date.today().isoformat()
-history_dir = '/home/joji/.standup-history'
+history_dir = os.path.expanduser('~/.standup-history')
 os.makedirs(history_dir, exist_ok=True)
 filepath = os.path.join(history_dir, f'{today}-{mode}-{repo}.json')
 
@@ -229,7 +229,7 @@ EOF
 **重要**:
 - Step 4 の `export REPORT=...` と同じ箇所で `export STANDUP_MODE=morning`（または `evening`）もセットすること
 - 保存後のメッセージには必ず保存先のフルパスを含めること
-- 正しい例: `💾 スタンドアップ履歴を保存しました: /home/joji/.standup-history/2026-04-25-morning-claude-hurikaeri.json`
+- 正しい例: `💾 スタンドアップ履歴を保存しました: ~/.standup-history/2026-04-25-morning-claude-hurikaeri.json`
 - NG例: `💾 履歴に保存しました（同日上書き、合計1件）`（パスなし・ファイル名なしは不可）
 
 ## Step 6: 履歴を検索する（`--search <keyword>` 指定時のみ）
@@ -243,7 +243,7 @@ python3 - <<EOF
 import os, json, glob
 
 keyword = """${SEARCH_KEYWORD}"""
-history_dir = '/home/joji/.standup-history'
+history_dir = os.path.expanduser('~/.standup-history')
 
 if not os.path.isdir(history_dir):
     print(f"履歴ディレクトリが見つかりません: {history_dir}")
@@ -288,7 +288,7 @@ import os, json, glob, re
 from datetime import date, timedelta
 
 period = """${SUMMARY_PERIOD}"""
-history_dir = '/home/joji/.standup-history'
+history_dir = os.path.expanduser('~/.standup-history')
 
 if not os.path.isdir(history_dir):
     print(f"履歴ディレクトリが見つかりません: {history_dir}")
