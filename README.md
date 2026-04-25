@@ -1,5 +1,9 @@
 # Claude Standup（朝会・夕会アシスタント）
 
+> **English summary:** A Claude Code skill that auto-collects your GitHub activity (commits, diffs, PRs) and runs daily standup meetings (morning planning + evening retrospective) as a scrum master. Supports `/standup morning` and `/standup evening` commands.
+>
+> Compatible with: Claude Code, OpenAI Codex CLI, Gemini CLI
+
 GitHub の作業状況を自動収集し、毎日の朝会・夕会を Claude と行うための Claude Code スキルです。
 
 ## 概要
