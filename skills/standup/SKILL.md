@@ -391,6 +391,37 @@ EOF
 - **1回に1つの質問だけする（質問を重ねない）**
 - 励ましやポジティブなフィードバックを適度に入れる
 
+## Webhook URL のセキュリティ設定
+
+Slack/Discord などへの通知に Webhook URL を使用する場合、以下のセキュリティ上の注意を守ってください。
+
+### 環境変数を優先して使用する
+
+Webhook URL は設定ファイルではなく環境変数から読み込むことを推奨します：
+
+```bash
+# 推奨: 環境変数で設定する
+export STANDUP_WEBHOOK_URL="https://hooks.slack.com/services/..."
+
+# スクリプト内での読み込み順序（環境変数を優先、config はフォールバック）
+WEBHOOK_URL="${STANDUP_WEBHOOK_URL:-$(jq -r '.webhookUrl // empty' .standup-config.json 2>/dev/null)}"
+```
+
+### .standup-config.json を .gitignore に追加する
+
+`.standup-config.json` に Webhook URL などの機密情報を記載する場合は、必ずリポジトリへのコミットを防いでください：
+
+```bash
+# .gitignore に追加されているか確認する
+grep -q '.standup-config.json' .gitignore || echo '.standup-config.json' >> .gitignore
+```
+
+### 注意事項
+
+- Webhook URL は秘密情報です。リポジトリに平文でコミットしないでください
+- `.standup-config.json` は `.gitignore` に追加してください（このリポジトリでは設定済み）
+- 万一 Webhook URL が漏洩した場合は、即座に Slack/Discord 側でトークンを無効化してください
+
 ## コードレビューについて
 
 - 差分に気になる点があれば軽く触れる
