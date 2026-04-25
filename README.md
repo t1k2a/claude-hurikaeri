@@ -4,6 +4,10 @@
 >
 > Compatible with: Claude Code, OpenAI Codex CLI, Gemini CLI
 
+[![Claude Code Skill](https://img.shields.io/badge/Claude%20Code-Skill-blue?logo=anthropic)](https://github.com/t1k2a/claude-hurikaeri)
+[![skillsmp](https://img.shields.io/badge/skillsmp-Listed-green)](https://skillsmp.com)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 GitHub の作業状況を自動収集し、毎日の朝会・夕会を Claude と行うための Claude Code スキルです。
 
 ## 概要
