@@ -712,3 +712,76 @@ grep -q '.standup-config.json' .gitignore || echo '.standup-config.json' >> .git
 - 差分に気になる点があれば軽く触れる
 - 深刻な問題（セキュリティ、バグの可能性）は必ず指摘する
 - ただし朝会・夕会では深入りしすぎず、別途レビューを提案する
+
+---
+
+## チームスタンドアップ集計（team-summary.sh）
+
+Issue #43 で追加されたチーム向けの非同期スタンドアップ集計機能です。
+
+### 概要
+
+複数メンバーのスタンドアップ回答を一元集計し、チームサマリーを生成・Webhook 送信します。
+
+### 使い方
+
+```bash
+# 基本実行（表示のみ）
+bash skills/standup/team-summary.sh
+
+# 履歴ディレクトリを指定して実行
+bash skills/standup/team-summary.sh --history-dir ~/.standup-history
+
+# 特定日の集計
+bash skills/standup/team-summary.sh --date 2026-04-25
+
+# Webhook 送信（環境変数）
+export STANDUP_WEBHOOK_URL="https://hooks.slack.com/services/..."
+bash skills/standup/team-summary.sh
+
+# Webhook 送信（引数で指定）
+bash skills/standup/team-summary.sh --webhook "https://hooks.slack.com/services/..."
+```
+
+### 履歴ディレクトリ構成
+
+メンバーごとにサブディレクトリを作成し、日付 JSON を配置する方式を推奨します：
+
+```
+~/.standup-history/
+  alice/
+    2026-04-25.json     # {"today": "機能実装", "blockers": "なし", "yesterday": "設計"}
+    2026-04-24.json
+  bob/
+    2026-04-25.json
+  charlie/
+    # 未回答 → 未回答者リストに追加される
+```
+
+フラットな JSON ファイル（`--save` で保存した形式）も自動検出します。
+
+### 出力例
+
+```
+=== チームスタンドアップ集計 [2026-04-25] ===
+
+参加率: 2/3 人 (66%)
+回答済み: alice, bob
+未回答: charlie
+
+【今日やること】
+  - [alice] 機能実装
+  - [bob] コードレビュー
+
+【ブロッカー】
+  （ブロッカーなし）
+
+集計時刻: 2026-04-25 09:00
+```
+
+### 環境変数
+
+| 変数名 | 説明 |
+|--------|------|
+| `STANDUP_WEBHOOK_URL` | Webhook 送信先 URL |
+| `STANDUP_HISTORY_DIR` | 履歴ディレクトリ（デフォルト: `~/.standup-history`）|
