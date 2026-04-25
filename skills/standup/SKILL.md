@@ -9,7 +9,7 @@ description: >
   Supports --export html option to export the report as an HTML file.
   Supports --template option to customize the report format with a Markdown template.
   Supports --notify option to post the report to Slack/Discord via Webhook URL.
-argument-hint: "[morning|evening] [hours] [repo_path1 repo_path2 ...] [--save] [--export html] [--open] [--notify] [--search <keyword>] [--summary weekly|monthly] [--template <path>]"
+argument-hint: "[morning|evening] [hours] [repo_path1 repo_path2 ...] [--save] [--export html] [--open] [--notify] [--search <keyword>] [--summary weekly|monthly] [--template <path>] [--setup]"
 ---
 
 # Standup Meeting Skill（朝会・夕会）
@@ -43,6 +43,7 @@ argument-hint: "[morning|evening] [hours] [repo_path1 repo_path2 ...] [--save] [
 - `--summary weekly` → 過去7日分のスタンドアップ履歴を週次サマリーとして集計・表示する（朝会・夕会は実施しない）
 - `--summary monthly` → 過去30日分のスタンドアップ履歴を月次サマリーとして集計・表示する（朝会・夕会は実施しない）
 - `--template <path>` → 指定した Markdown テンプレートファイルをレポートフォーマットとして使用する（省略時はデフォルトフォーマットを使用）
+- `--setup` → 初回セットアップウィザードを起動する。`bash skills/standup/setup.sh` を実行するよう案内し、朝会・夕会はスキップする。
 
 解釈した結果：
 1. **モード**: `morning` または `evening`（デフォルト: `morning`）
@@ -60,8 +61,27 @@ argument-hint: "[morning|evening] [hours] [repo_path1 repo_path2 ...] [--save] [
 8. **検索キーワード**: `--search <keyword>` が含まれる場合はそのキーワード
 9. **サマリー期間**: `--summary weekly` または `--summary monthly` が含まれる場合はその値
 10. **テンプレートパス**: `--template <path>` が含まれる場合はそのパス（デフォルト: なし）
+11. **セットアップフラグ**: `--setup` が含まれる場合は `true`（デフォルト: `false`）
 
 `--search` または `--summary` が指定された場合は Step 5〜7 のみ実行し、通常の朝会・夕会（Step 1〜4）はスキップしてください。
+
+`--setup` が指定された場合は以下のメッセージを表示して終了してください（朝会・夕会はスキップ）：
+
+```
+初回セットアップウィザードを起動します。
+以下のコマンドをターミナルで実行してください:
+
+  bash skills/standup/setup.sh
+
+または、リポジトリをクローンしていない場合:
+
+  curl -fsSL https://raw.githubusercontent.com/t1k2a/claude-hurikaeri/main/skills/standup/setup.sh | bash
+
+セットアップウィザードは以下を対話形式でガイドします:
+- Slack/Discord Webhook URL の設定
+- デフォルトリポジトリパスの設定
+- 前提条件（git, gh, curl）のチェック
+```
 
 ## Step 1: リポジトリ情報を収集
 
