@@ -1,7 +1,5 @@
-node_modules/
-build/
 *.log
 .DS_Store
-*.tsbuildinfo
 .claude/settings.local.json
 .standup-config.json
+standup-*.html
