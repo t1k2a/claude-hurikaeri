@@ -9,7 +9,7 @@ description: >
   Supports --export html option to export the report as an HTML file.
   Supports --template option to customize the report format with a Markdown template.
   Supports --notify option to post the report to Slack/Discord via Webhook URL.
-argument-hint: "[morning|evening] [hours] [repo_path1 repo_path2 ...] [--save] [--export html] [--open] [--notify] [--search <keyword>] [--summary weekly|monthly] [--template <path>]"
+argument-hint: "[morning|evening] [hours] [repo_path1 repo_path2 ...] [--save] [--export html] [--open] [--notify] [--search <keyword>] [--summary weekly|monthly] [--template <path>] [--dashboard]"
 ---
 
 # Standup Meeting Skill（朝会・夕会）
@@ -43,6 +43,7 @@ argument-hint: "[morning|evening] [hours] [repo_path1 repo_path2 ...] [--save] [
 - `--summary weekly` → 過去7日分のスタンドアップ履歴を週次サマリーとして集計・表示する（朝会・夕会は実施しない）
 - `--summary monthly` → 過去30日分のスタンドアップ履歴を月次サマリーとして集計・表示する（朝会・夕会は実施しない）
 - `--template <path>` → 指定した Markdown テンプレートファイルをレポートフォーマットとして使用する（省略時はデフォルトフォーマットを使用）
+- `--dashboard` → `~/.standup-history/` の履歴 JSON を集計し、静的 HTML ダッシュボードを生成する。`bash skills/standup/dashboard.sh` を実行するよう案内し、朝会・夕会はスキップする。オプションとして `--days N`（デフォルト: 30）と `--out <path>` を渡せる。
 
 解釈した結果：
 1. **モード**: `morning` または `evening`（デフォルト: `morning`）
