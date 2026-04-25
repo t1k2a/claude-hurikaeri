@@ -1,25 +1,7 @@
 {
-  "name": "claude-hurikaeri-mcp",
+  "name": "claude-hurikaeri",
   "version": "1.0.0",
-  "description": "Claude Code skill & MCP server for GitHub standup meetings - 朝会・夕会",
-  "type": "module",
-  "main": "build/index.js",
-  "bin": {
-    "claude-hurikaeri-mcp": "build/index.js"
-  },
-  "files": [
-    "build",
-    ".claude-plugin",
-    "skills",
-    "README.md",
-    "system_prompt.md"
-  ],
-  "scripts": {
-    "build": "tsc",
-    "watch": "tsc --watch",
-    "prepare": "npm run build",
-    "test": "npm run build && node --test build/claude-history.test.js build/git-history.test.js"
-  },
+  "description": "Claude Code skill for GitHub standup meetings - 朝会・夕会",
   "repository": {
     "type": "git",
     "url": "https://github.com/t1k2a/claude-hurikaeri.git"
@@ -29,24 +11,12 @@
     "url": "https://github.com/t1k2a/claude-hurikaeri/issues"
   },
   "keywords": [
-    "mcp",
     "claude",
     "claude-code-skill",
     "github",
     "standup",
-    "scrum",
-    "model-context-protocol"
+    "scrum"
   ],
   "author": "t1k2a",
-  "license": "MIT",
-  "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.0.4"
-  },
-  "devDependencies": {
-    "@types/node": "^22.10.2",
-    "typescript": "^5.7.2"
-  },
-  "engines": {
-    "node": ">=18.0.0"
-  }
+  "license": "MIT"
 }
