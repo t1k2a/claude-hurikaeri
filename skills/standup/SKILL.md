@@ -5,7 +5,8 @@ description: >
   Use when the user says "standup", "morning standup", "evening standup",
   "朝会", "夕会", "振り返り", "daily standup", or invokes /standup.
   Supports morning (plan the day) and evening (reflect on today) modes.
-argument-hint: "[morning|evening] [hours] [--save] [--search <keyword>] [--summary weekly|monthly]"
+  Supports --template option to customize the report format with a Markdown template.
+argument-hint: "[morning|evening] [hours] [--save] [--search <keyword>] [--summary weekly|monthly] [--template <path>]"
 ---
 
 # Standup Meeting Skill（朝会・夕会）
@@ -32,6 +33,7 @@ argument-hint: "[morning|evening] [hours] [--save] [--search <keyword>] [--summa
 - `--search <keyword>` → 過去のスタンドアップ履歴からキーワード検索して結果を表示する（朝会・夕会は実施しない）
 - `--summary weekly` → 過去7日分のスタンドアップ履歴を週次サマリーとして集計・表示する（朝会・夕会は実施しない）
 - `--summary monthly` → 過去30日分のスタンドアップ履歴を月次サマリーとして集計・表示する（朝会・夕会は実施しない）
+- `--template <path>` → 指定した Markdown テンプレートファイルをレポートフォーマットとして使用する（省略時はデフォルトフォーマットを使用）
 
 解釈した結果：
 1. **モード**: `morning` または `evening`（デフォルト: `morning`）
@@ -39,6 +41,7 @@ argument-hint: "[morning|evening] [hours] [--save] [--search <keyword>] [--summa
 3. **保存フラグ**: `--save` が含まれる場合は `true`（デフォルト: `false`）
 4. **検索キーワード**: `--search <keyword>` が含まれる場合はそのキーワード
 5. **サマリー期間**: `--summary weekly` または `--summary monthly` が含まれる場合はその値
+6. **テンプレートパス**: `--template <path>` が含まれる場合はそのパス（デフォルト: なし）
 
 `--search` または `--summary` が指定された場合は Step 5〜7 のみ実行し、通常の朝会・夕会（Step 1〜4）はスキップしてください。
 
@@ -111,7 +114,29 @@ gh pr list --search "review-requested:@me" --state=open --json number,title,auth
 
 ## Step 2: 収集した情報をまとめる
 
-以下の構成でマークダウンレポートを作成してください：
+### 2-0: カスタムテンプレートの読み込み（`--template` 指定時のみ）
+
+`--template <path>` が指定されている場合、テンプレートファイルを読み込んでレポートフォーマットとして使用します：
+
+```bash
+TEMPLATE_PATH="<--template で指定されたパス>"
+if [ -f "$TEMPLATE_PATH" ]; then
+  TEMPLATE_CONTENT=$(cat "$TEMPLATE_PATH")
+  echo "テンプレートを読み込みました: $TEMPLATE_PATH"
+else
+  echo "警告: テンプレートファイルが見つかりません: $TEMPLATE_PATH — デフォルトフォーマットを使用します。"
+  TEMPLATE_CONTENT=""
+fi
+```
+
+テンプレートファイルが正常に読み込めた場合は、下記のデフォルトフォーマットの代わりにテンプレートの内容をレポート構造として使用してください。
+テンプレートが読み込めなかった場合はデフォルトフォーマットを使用してください。
+
+デフォルトテンプレートのサンプルは `skills/standup/default-template.md` にあります。
+
+### 2-1: レポートを作成する
+
+以下の構成でマークダウンレポートを作成してください（カスタムテンプレートが指定された場合はその構成に従う）：
 
 ```
 # 今日やったこと
@@ -144,6 +169,7 @@ gh pr list --search "review-requested:@me" --state=open --json number,title,auth
 - 「今日やったこと」は自動生成（コミット、マージPR、未コミット変更）
 - 「明日やること」は空欄3行のみ（Step 3でユーザーに質問する）
 - 「参考: オープン中のタスク」はデータがある場合のみ表示
+- カスタムテンプレート使用時はテンプレートの構成を優先し、収集した情報を適切なセクションに埋め込む
 
 ## Step 3: スタンドアップミーティングを実施
 
