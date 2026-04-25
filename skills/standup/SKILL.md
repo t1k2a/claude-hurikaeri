@@ -43,6 +43,7 @@ argument-hint: "[morning|evening] [hours] [repo_path1 repo_path2 ...] [--save] [
 - `--summary weekly` → 過去7日分のスタンドアップ履歴を週次サマリーとして集計・表示する（朝会・夕会は実施しない）
 - `--summary monthly` → 過去30日分のスタンドアップ履歴を月次サマリーとして集計・表示する（朝会・夕会は実施しない）
 - `--template <path>` → 指定した Markdown テンプレートファイルをレポートフォーマットとして使用する（省略時はデフォルトフォーマットを使用）
+- `--schedule` → 定期自動送信の設定方法を表示する（`skills/standup/cron-standup.sh` を参照）
 
 解釈した結果：
 1. **モード**: `morning` または `evening`（デフォルト: `morning`）
