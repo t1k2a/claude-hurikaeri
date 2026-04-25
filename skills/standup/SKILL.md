@@ -8,7 +8,8 @@ description: >
   Supports multiple repository paths as arguments.
   Supports --export html option to export the report as an HTML file.
   Supports --template option to customize the report format with a Markdown template.
-argument-hint: "[morning|evening] [hours] [repo_path1 repo_path2 ...] [--save] [--export html] [--open] [--search <keyword>] [--summary weekly|monthly] [--template <path>]"
+  Supports --notify option to post the report to Slack/Discord via Webhook URL.
+argument-hint: "[morning|evening] [hours] [repo_path1 repo_path2 ...] [--save] [--export html] [--open] [--notify] [--search <keyword>] [--summary weekly|monthly] [--template <path>]"
 ---
 
 # Standup Meeting Skill（朝会・夕会）
@@ -36,6 +37,7 @@ argument-hint: "[morning|evening] [hours] [repo_path1 repo_path2 ...] [--save] [
 - `morning /absolute/path/to/repo` → 朝会モード、絶対パス指定のリポジトリ
 - `--export html` → レポート生成後に HTML ファイルとしてエクスポートする
 - `--open` → エクスポート後にブラウザで自動オープンする（`--export html` と併用）
+- `--notify` → レポート完了後に Slack/Discord Webhook に投稿する
 - `--save` → スタンドアップレポートを `~/.standup-history/YYYY-MM-DD-morning-<repo>.json` または `~/.standup-history/YYYY-MM-DD-evening-<repo>.json` に保存する（`~` はそのユーザーの HOME ディレクトリ）
 - `--search <keyword>` → 過去のスタンドアップ履歴からキーワード検索して結果を表示する（朝会・夕会は実施しない）
 - `--summary weekly` → 過去7日分のスタンドアップ履歴を週次サマリーとして集計・表示する（朝会・夕会は実施しない）
@@ -53,10 +55,11 @@ argument-hint: "[morning|evening] [hours] [repo_path1 repo_path2 ...] [--save] [
 - 例: `morning ./repo1 ./repo2` → モード: morning、時間: 24（デフォルト）、リポジトリ: `./repo1`, `./repo2`
 4. **エクスポートフラグ**: `--export html` が含まれる場合は `html`（デフォルト: なし）
 5. **自動オープンフラグ**: `--open` が含まれる場合は `true`（デフォルト: `false`）
-6. **保存フラグ**: `--save` が含まれる場合は `true`（デフォルト: `false`）
-7. **検索キーワード**: `--search <keyword>` が含まれる場合はそのキーワード
-8. **サマリー期間**: `--summary weekly` または `--summary monthly` が含まれる場合はその値
-9. **テンプレートパス**: `--template <path>` が含まれる場合はそのパス（デフォルト: なし）
+6. **通知フラグ**: `--notify` が含まれる場合は `true`（デフォルト: `false`）
+7. **保存フラグ**: `--save` が含まれる場合は `true`（デフォルト: `false`）
+8. **検索キーワード**: `--search <keyword>` が含まれる場合はそのキーワード
+9. **サマリー期間**: `--summary weekly` または `--summary monthly` が含まれる場合はその値
+10. **テンプレートパス**: `--template <path>` が含まれる場合はそのパス（デフォルト: なし）
 
 `--search` または `--summary` が指定された場合は Step 5〜7 のみ実行し、通常の朝会・夕会（Step 1〜4）はスキップしてください。
 
@@ -599,6 +602,70 @@ fi
 ```
 
 「🌐 ブラウザでレポートを開きました」と出力してください。
+
+## Step 6: Webhook 通知（`--notify` オプション指定時のみ）
+
+`--notify` フラグが指定されている場合のみ、このステップを実行してください。
+
+### セキュリティ上の注意
+
+> **重要**: Webhook URL は機密情報です。以下のガイドラインに従ってください：
+> - **環境変数 `STANDUP_WEBHOOK_URL` を推奨**（設定ファイルより安全）
+> - 設定ファイル `.standup-config.json` を使う場合は必ず `.gitignore` に追加すること
+> - Webhook URL をコードやドキュメントに直接記述しないこと
+
+### 6-1: Webhook URL を取得する（環境変数優先）
+
+```bash
+# まず環境変数を確認する（推奨）
+WEBHOOK_URL="${STANDUP_WEBHOOK_URL:-}"
+
+# 環境変数が未設定の場合、設定ファイルにフォールバックする
+if [ -z "$WEBHOOK_URL" ]; then
+  CONFIG_FILE="$(git rev-parse --show-toplevel 2>/dev/null || pwd)/.standup-config.json"
+  if [ -f "$CONFIG_FILE" ]; then
+    WEBHOOK_URL="$(python3 -c "import json,sys; d=json.load(open('$CONFIG_FILE')); print(d.get('webhookUrl',''))" 2>/dev/null || echo "")"
+  fi
+fi
+
+if [ -z "$WEBHOOK_URL" ]; then
+  echo "警告: Webhook URL が設定されていません。通知をスキップします。"
+  echo "設定方法: export STANDUP_WEBHOOK_URL='https://hooks.slack.com/...' または .standup-config.json を作成してください。"
+  echo "注意: .standup-config.json を使う場合は .gitignore に追加することを忘れずに。"
+  exit 0
+fi
+```
+
+### 6-2: Webhook に POST する
+
+```bash
+# JSON ペイロードを作成して POST する
+PAYLOAD=$(python3 -c "
+import json, os
+report = os.environ.get('STANDUP_REPORT', '')
+print(json.dumps({'text': report}))
+" 2>/dev/null)
+
+curl -s -X POST \
+  -H 'Content-Type: application/json' \
+  -d "$PAYLOAD" \
+  "$WEBHOOK_URL" \
+  && echo "通知を送信しました" \
+  || echo "警告: Webhook への送信に失敗しました"
+```
+
+### 設定ファイル `.standup-config.json` の例（使用する場合）
+
+```json
+{
+  "webhookUrl": "https://hooks.slack.com/services/YOUR/WEBHOOK/URL"
+}
+```
+
+**必ず `.gitignore` に `.standup-config.json` を追加してください：**
+```bash
+echo '.standup-config.json' >> .gitignore
+```
 
 ## コミュニケーションスタイル
 
