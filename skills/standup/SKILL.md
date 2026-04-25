@@ -9,7 +9,8 @@ description: >
   Supports --export html option to export the report as an HTML file.
   Supports --template option to customize the report format with a Markdown template.
   Supports --notify option to post the report to Slack/Discord via Webhook URL.
-argument-hint: "[morning|evening] [hours] [repo_path1 repo_path2 ...] [--save] [--export html] [--open] [--notify] [--search <keyword>] [--summary weekly|monthly] [--template <path>]"
+  Supports --notify chatwork option to post the report to Chatwork via API v2.
+argument-hint: "[morning|evening] [hours] [repo_path1 repo_path2 ...] [--save] [--export html] [--open] [--notify [chatwork]] [--search <keyword>] [--summary weekly|monthly] [--template <path>]"
 ---
 
 # Standup Meeting Skill（朝会・夕会）
@@ -38,6 +39,7 @@ argument-hint: "[morning|evening] [hours] [repo_path1 repo_path2 ...] [--save] [
 - `--export html` → レポート生成後に HTML ファイルとしてエクスポートする
 - `--open` → エクスポート後にブラウザで自動オープンする（`--export html` と併用）
 - `--notify` → レポート完了後に Slack/Discord Webhook に投稿する
+- `--notify chatwork` → レポート完了後に Chatwork API v2 で指定ルームに投稿する（環境変数 `STANDUP_CHATWORK_TOKEN` と `STANDUP_CHATWORK_ROOM_ID` が必要）
 - `--save` → スタンドアップレポートを `~/.standup-history/YYYY-MM-DD-morning-<repo>.json` または `~/.standup-history/YYYY-MM-DD-evening-<repo>.json` に保存する（`~` はそのユーザーの HOME ディレクトリ）
 - `--search <keyword>` → 過去のスタンドアップ履歴からキーワード検索して結果を表示する（朝会・夕会は実施しない）
 - `--summary weekly` → 過去7日分のスタンドアップ履歴を週次サマリーとして集計・表示する（朝会・夕会は実施しない）
@@ -706,6 +708,52 @@ grep -q '.standup-config.json' .gitignore || echo '.standup-config.json' >> .git
 - Webhook URL は秘密情報です。リポジトリに平文でコミットしないでください
 - `.standup-config.json` は `.gitignore` に追加してください（このリポジトリでは設定済み）
 - 万一 Webhook URL が漏洩した場合は、即座に Slack/Discord 側でトークンを無効化してください
+
+## Chatwork 通知の設定
+
+`--notify chatwork` オプションを使用する場合、以下の環境変数を設定してください。
+
+### 環境変数
+
+```bash
+export STANDUP_CHATWORK_TOKEN="your_chatwork_api_token"
+export STANDUP_CHATWORK_ROOM_ID="your_room_id"
+```
+
+### API トークンの取得方法
+
+1. Chatwork にログインする
+2. 右上のアカウント名 → 「サービス連携」をクリックする
+3. 「API トークン」セクションで「発行する」をクリックする
+4. 表示されたトークンをコピーして `STANDUP_CHATWORK_TOKEN` に設定する
+
+### ルーム ID の確認方法
+
+Chatwork のチャット URL に含まれる数字がルーム ID です。
+例: `https://www.chatwork.com/#!rid123456` → ルーム ID は `123456`
+
+### 使用例
+
+```bash
+export STANDUP_CHATWORK_TOKEN="abc123..."
+export STANDUP_CHATWORK_ROOM_ID="123456"
+
+# Chatwork に通知する
+/standup evening --notify chatwork
+
+# 直接スクリプトを呼び出す場合
+skills/standup/chatwork-notify.sh "本日のスタンドアップレポート..."
+```
+
+### オプション環境変数
+
+```bash
+# リトライ回数（デフォルト: 3）
+export STANDUP_CHATWORK_RETRY=3
+
+# リトライ間隔（秒、デフォルト: 2）
+export STANDUP_CHATWORK_RETRY_INTERVAL=2
+```
 
 ## コードレビューについて
 
