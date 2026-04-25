@@ -15,6 +15,8 @@ import { existsSync } from "fs";
 import { resolve, basename } from "path";
 import { collectClaudeHistory } from "./claude-history.js";
 import { collectGitCommits } from "./git-history.js";
+import { sendWebhook } from "./webhook.js";
+import { generateCrontabEntry, generateSystemdTimer, ScheduleConfig } from "./scheduler.js";
 
 interface StandupInfo {
   repoName: string;
@@ -253,6 +255,17 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
               description: "何時間前からの情報を収集するか（デフォルト: 24時間）",
               default: 24,
             },
+            webhook_url: {
+              type: "string",
+              description:
+                "レポートを送信する Webhook URL（省略時は送信しない）",
+            },
+            schedule: {
+              type: "string",
+              description:
+                "定期実行スケジュール。'daily' / 'weekly' を指定すると crontab エントリと systemd timer を出力する",
+              enum: ["daily", "weekly"],
+            },
           },
           required: ["repo_path"],
         },
@@ -265,16 +278,51 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   if (request.params.name === "collect_standup_info") {
     const repoPath = String(request.params.arguments?.repo_path || ".");
     const sinceHours = Number(request.params.arguments?.since_hours || 24);
+    const webhookUrl = request.params.arguments?.webhook_url
+      ? String(request.params.arguments.webhook_url)
+      : undefined;
+    const schedulePreset = request.params.arguments?.schedule
+      ? String(request.params.arguments.schedule)
+      : undefined;
 
     try {
       const info = collectStandupInfo(repoPath, sinceHours);
       const markdown = formatStandupMarkdown(info);
 
+      const resultParts: string[] = [markdown];
+
+      // Send to Webhook if requested
+      if (webhookUrl) {
+        const sent = await sendWebhook(webhookUrl, markdown);
+        if (sent) {
+          resultParts.push(`\n---\nWebhook 送信成功: ${webhookUrl}`);
+        } else {
+          resultParts.push(
+            `\n---\nWebhook 送信失敗（リトライ上限）: ${webhookUrl}`
+          );
+        }
+      }
+
+      // Generate schedule config if requested
+      if (schedulePreset === "daily" || schedulePreset === "weekly") {
+        const scheduleConfig: ScheduleConfig = {
+          preset: schedulePreset as "daily" | "weekly",
+        };
+        const crontab = generateCrontabEntry(
+          `claude-hurikaeri-mcp # repo_path=${repoPath}`,
+          scheduleConfig
+        );
+        const timer = generateSystemdTimer("claude-hurikaeri-standup", scheduleConfig);
+        resultParts.push(
+          `\n---\n## 定期実行設定\n\n### crontab エントリ\n\`\`\`\n${crontab}\n\`\`\`\n\n### systemd timer\n\`\`\`ini\n${timer}\`\`\``
+        );
+      }
+
       return {
         content: [
           {
             type: "text",
-            text: markdown,
+            text: resultParts.join(""),
           },
         ],
       };
