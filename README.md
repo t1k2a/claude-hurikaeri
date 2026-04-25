@@ -32,6 +32,22 @@ mkdir -p <your-project>/.claude/skills/
 cp -r claude-hurikaeri/skills/standup <your-project>/.claude/skills/
 ```
 
+## 初回セットアップ
+
+クローン後、対話型セットアップウィザードを実行して Webhook URL などの必須設定を行うことを推奨します：
+
+```bash
+cd claude-hurikaeri
+bash skills/standup/setup.sh
+```
+
+ウィザードは以下をガイドします：
+- Slack/Discord の Webhook URL の設定（`--notify` オプション使用時に必要）
+- デフォルトリポジトリパスの設定
+- 前提条件（git, gh, curl）の確認
+
+設定はシェル設定ファイル（`~/.bashrc` または `~/.zshrc`）に自動的に追記されます。
+
 ## 使い方
 
 Claude Code で以下のように呼び出します：
@@ -61,6 +77,7 @@ Claude Code で以下のように呼び出します：
 | `--export html` | HTML ファイルとしてエクスポート |
 | `--notify` | Slack/Discord Webhook に送信 |
 | `--template <path>` | カスタムテンプレートを使用 |
+| `--setup` | 初回セットアップウィザードを起動（`bash skills/standup/setup.sh` を案内）|
 
 ### 前提条件
 
