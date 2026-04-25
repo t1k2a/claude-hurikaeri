@@ -264,6 +264,27 @@ crontab -e
 ### Automator / ショートカットと組み合わせ
 macOS の Automator やショートカットアプリで、スクリプト実行 → Claude を開くまでを自動化できます。
 
+## セキュリティ上の注意
+
+### Webhook URL の取り扱い
+
+Slack/Discord などへの通知機能（Issue #15）を使用する際は、Webhook URL の取り扱いに注意してください。
+
+**環境変数の使用を推奨します：**
+```bash
+# 推奨: 環境変数で Webhook URL を設定する
+export STANDUP_WEBHOOK_URL="https://hooks.slack.com/services/..."
+```
+
+**設定ファイルを使用する場合は .gitignore に追加してください：**
+```bash
+# .standup-config.json をリポジトリにコミットしないよう .gitignore に追加する
+echo '.standup-config.json' >> .gitignore
+```
+
+> **注意**: このリポジトリの `.gitignore` には `.standup-config.json` が含まれています。
+> Webhook URL が漏洩した場合は、Slack/Discord 側で即座にトークンを無効化してください。
+
 ## よくある質問
 
 **Q: MCP 版とスタンドアロン版の違いは？**
