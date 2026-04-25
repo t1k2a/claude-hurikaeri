@@ -6,7 +6,9 @@ description: >
   "朝会", "夕会", "振り返り", "daily standup", or invokes /standup.
   Supports morning (plan the day) and evening (reflect on today) modes.
   Supports multiple repository paths as arguments.
-argument-hint: "[morning|evening] [hours] [repo_path1 repo_path2 ...]"
+  Supports --export html option to export the report as an HTML file.
+  Supports --template option to customize the report format with a Markdown template.
+argument-hint: "[morning|evening] [hours] [repo_path1 repo_path2 ...] [--save] [--export html] [--open] [--search <keyword>] [--summary weekly|monthly] [--template <path>]"
 ---
 
 # Standup Meeting Skill（朝会・夕会）
@@ -32,16 +34,31 @@ argument-hint: "[morning|evening] [hours] [repo_path1 repo_path2 ...]"
 - `morning repo1 repo2 repo3` → 朝会モード、複数リポジトリを一括処理
 - `morning 48 repo1 repo2` → 朝会モード、過去48時間、複数リポジトリを一括処理
 - `morning /absolute/path/to/repo` → 朝会モード、絶対パス指定のリポジトリ
+- `--export html` → レポート生成後に HTML ファイルとしてエクスポートする
+- `--open` → エクスポート後にブラウザで自動オープンする（`--export html` と併用）
+- `--save` → スタンドアップレポートを `~/.standup-history/YYYY-MM-DD-morning-<repo>.json` または `~/.standup-history/YYYY-MM-DD-evening-<repo>.json` に保存する（`~` はそのユーザーの HOME ディレクトリ）
+- `--search <keyword>` → 過去のスタンドアップ履歴からキーワード検索して結果を表示する（朝会・夕会は実施しない）
+- `--summary weekly` → 過去7日分のスタンドアップ履歴を週次サマリーとして集計・表示する（朝会・夕会は実施しない）
+- `--summary monthly` → 過去30日分のスタンドアップ履歴を月次サマリーとして集計・表示する（朝会・夕会は実施しない）
+- `--template <path>` → 指定した Markdown テンプレートファイルをレポートフォーマットとして使用する（省略時はデフォルトフォーマットを使用）
 
 解釈した結果：
 1. **モード**: `morning` または `evening`（デフォルト: `morning`）
 2. **時間**: 遡る時間数（morning デフォルト: 24、evening デフォルト: 10）
-3. **リポジトリリスト**: 数値以外の引数をリポジトリパスとして解釈する。指定がない場合は現在のディレクトリ（`.`）を使用する。
+3. **リポジトリリスト**: `--` で始まらない文字列で、数値でないものをリポジトリパスとして解釈する。指定がない場合は現在のディレクトリ（`.`）を使用する。
 
 リポジトリパスの解釈ルール：
-- 引数の中で `morning`/`evening`/`朝会`/`夕会` 以外の文字列、かつ数値でないものをリポジトリパスとして扱う
+- 引数の中で `morning`/`evening`/`朝会`/`夕会` 以外の文字列、かつ数値でなく、`--` で始まらないものをリポジトリパスとして扱う
 - 例: `morning 24 ./repo1 /home/user/repo2` → モード: morning、時間: 24、リポジトリ: `./repo1`, `/home/user/repo2`
 - 例: `morning ./repo1 ./repo2` → モード: morning、時間: 24（デフォルト）、リポジトリ: `./repo1`, `./repo2`
+4. **エクスポートフラグ**: `--export html` が含まれる場合は `html`（デフォルト: なし）
+5. **自動オープンフラグ**: `--open` が含まれる場合は `true`（デフォルト: `false`）
+6. **保存フラグ**: `--save` が含まれる場合は `true`（デフォルト: `false`）
+7. **検索キーワード**: `--search <keyword>` が含まれる場合はそのキーワード
+8. **サマリー期間**: `--summary weekly` または `--summary monthly` が含まれる場合はその値
+9. **テンプレートパス**: `--template <path>` が含まれる場合はそのパス（デフォルト: なし）
+
+`--search` または `--summary` が指定された場合は Step 5〜7 のみ実行し、通常の朝会・夕会（Step 1〜4）はスキップしてください。
 
 ## Step 1: リポジトリ情報を収集
 
@@ -132,7 +149,29 @@ gh pr list --search "review-requested:@me" --state=open --json number,title,auth
 
 ## Step 2: 収集した情報をまとめる
 
-リポジトリが1つの場合は従来のフォーマット、複数リポジトリの場合はリポジトリごとにセクションを分けたフォーマットでレポートを作成してください：
+### 2-0: カスタムテンプレートの読み込み（`--template` 指定時のみ）
+
+`--template <path>` が指定されている場合、テンプレートファイルを読み込んでレポートフォーマットとして使用します：
+
+```bash
+TEMPLATE_PATH="<--template で指定されたパス>"
+if [ -f "$TEMPLATE_PATH" ]; then
+  TEMPLATE_CONTENT=$(cat "$TEMPLATE_PATH")
+  echo "テンプレートを読み込みました: $TEMPLATE_PATH"
+else
+  echo "警告: テンプレートファイルが見つかりません: $TEMPLATE_PATH — デフォルトフォーマットを使用します。"
+  TEMPLATE_CONTENT=""
+fi
+```
+
+テンプレートファイルが正常に読み込めた場合は、下記のデフォルトフォーマットの代わりにテンプレートの内容をレポート構造として使用してください。
+テンプレートが読み込めなかった場合はデフォルトフォーマットを使用してください。
+
+デフォルトテンプレートのサンプルは `skills/standup/default-template.md` にあります。
+
+### 2-1: レポートを作成する
+
+リポジトリが1つの場合は従来のフォーマット、複数リポジトリの場合はリポジトリごとにセクションを分けたフォーマットでレポートを作成してください（カスタムテンプレートが指定された場合はその構成に従う）：
 
 ### 単一リポジトリの場合（従来フォーマット）
 
@@ -208,6 +247,7 @@ gh pr list --search "review-requested:@me" --state=open --json number,title,auth
 - 複数リポジトリの場合、「明日やること」は全体まとめとして最後に1つ記載する
 - 「参考: オープン中のタスク」はデータがある場合のみ表示
 - スキップされたリポジトリは「⚠️ `<path>` はスキップされました」として記録する
+- カスタムテンプレート使用時はテンプレートの構成を優先し、収集した情報を適切なセクションに埋め込む
 
 ## Step 3: スタンドアップミーティングを実施
 
@@ -232,40 +272,333 @@ gh pr list --search "review-requested:@me" --state=open --json number,title,auth
 
 **重要**: 「明日やること」セクションはユーザーの回答で埋めること。空欄のままにしないこと。
 
-## Step 4: 振り返り結果をクリップボードにコピーする
+## Step 4: レポートをエクスポートしてクリップボードにコピーする
 
-Step 2 で作成したマークダウンレポートをクリップボードにコピーします。
-環境に応じて以下のコマンドを使い分けてください：
+Step 2 で作成したマークダウンレポートを `export REPORT` で環境変数にセットし、クリップボードにコピーします。
+
+以下の bash コマンドを実行してください。`<レポート全文>` を Step 2 で作成したレポートに置き換え、`<モード>` を `morning` または `evening` に置き換えてください：
 
 ```bash
-# 利用可能なクリップボードコマンドを検出する
+export REPORT='<レポート全文>'
+export STANDUP_MODE='<モード>'
+export STANDUP_REPO=$(basename "$(git rev-parse --show-toplevel 2>/dev/null || echo unknown)")
 if command -v pbcopy >/dev/null 2>&1; then
-  # macOS
-  echo "$STANDUP_REPORT" | pbcopy
+  printf '%s' "$REPORT" | pbcopy && echo "📋 クリップボードにコピーしました"
 elif command -v wl-copy >/dev/null 2>&1; then
-  # Wayland
-  echo "$STANDUP_REPORT" | wl-copy
+  printf '%s' "$REPORT" | wl-copy && echo "📋 クリップボードにコピーしました"
 elif command -v xclip >/dev/null 2>&1; then
-  # X11
-  echo "$STANDUP_REPORT" | xclip -selection clipboard
+  printf '%s' "$REPORT" | xclip -selection clipboard && echo "📋 クリップボードにコピーしました"
 elif command -v xsel >/dev/null 2>&1; then
-  # X11 (代替)
-  echo "$STANDUP_REPORT" | xsel --clipboard --input
+  printf '%s' "$REPORT" | xsel --clipboard --input && echo "📋 クリップボードにコピーしました"
 elif command -v clip.exe >/dev/null 2>&1; then
-  # WSL: clip.exe は UTF-16 LE を期待するため iconv で変換する
   if command -v iconv >/dev/null 2>&1; then
-    echo "$STANDUP_REPORT" | iconv -t UTF-16LE | clip.exe
+    printf '%s' "$REPORT" | iconv -t UTF-16LE | clip.exe && echo "📋 クリップボードにコピーしました"
   else
-    # iconv がない場合は PowerShell 経由でコピー
-    echo "$STANDUP_REPORT" | powershell.exe -Command "& { \$input | Set-Clipboard }"
+    printf '%s' "$REPORT" | powershell.exe -Command "& { \$input | Set-Clipboard }" && echo "📋 クリップボードにコピーしました"
   fi
 else
   echo "クリップボードコマンドが見つかりません。手動でコピーしてください。"
 fi
 ```
 
-コピーに成功した場合は「📋 クリップボードにコピーしました」と出力してください。
+## Step 5: スタンドアップ履歴を保存する（`--save` 指定時のみ）
+
+`--save` が指定されている場合、Step 4 で export した `$REPORT` 変数を使って履歴を保存します。
+Step 4 と同じ bash 呼び出し内に続けて実行してください（`$REPORT` が参照できる状態で実行すること）。
+
+```bash
+python3 - <<'EOF'
+import json, os
+from datetime import date
+
+report = os.environ.get('REPORT', '')
+if not report:
+    print("エラー: REPORT 変数が空です。Step 4 で export REPORT を実行してください。")
+    exit(1)
+
+mode = os.environ.get('STANDUP_MODE', 'morning')  # 'morning' or 'evening'
+repo = os.environ.get('STANDUP_REPO', 'unknown')
+today = date.today().isoformat()
+history_dir = os.path.expanduser('~/.standup-history')
+os.makedirs(history_dir, exist_ok=True)
+filepath = os.path.join(history_dir, f'{today}-{mode}-{repo}.json')
+
+with open(filepath, 'w', encoding='utf-8') as f:
+    json.dump({'date': today, 'mode': mode, 'repo': repo, 'report': report}, f, ensure_ascii=False, indent=2)
+
+print(f'💾 スタンドアップ履歴を保存しました: {filepath}')
+EOF
+```
+
+**重要**:
+- Step 4 の `export REPORT=...` と同じ箇所で `export STANDUP_MODE=morning`（または `evening`）もセットすること
+- 保存後のメッセージには必ず保存先のフルパスを含めること
+- 正しい例: `💾 スタンドアップ履歴を保存しました: ~/.standup-history/2026-04-25-morning-claude-hurikaeri.json`
+- NG例: `💾 履歴に保存しました（同日上書き、合計1件）`（パスなし・ファイル名なしは不可）
+
+## Step 6: 履歴を検索する（`--search <keyword>` 指定時のみ）
+
+`--search <keyword>` が指定されている場合、過去のスタンドアップ履歴からキーワードを全文検索します。
+このステップが指定された場合、通常の朝会・夕会（Step 1〜4）はスキップしてください。
+
+```bash
+SEARCH_KEYWORD="<--search で指定されたキーワード>"
+python3 - <<EOF
+import os, json, glob
+
+keyword = """${SEARCH_KEYWORD}"""
+history_dir = os.path.expanduser('~/.standup-history')
+
+if not os.path.isdir(history_dir):
+    print(f"履歴ディレクトリが見つかりません: {history_dir}")
+    print("--save オプションを使ってスタンドアップを保存してください。")
+    exit(0)
+
+files = sorted(glob.glob(os.path.join(history_dir, '*.json')))
+results = []
+
+for filepath in files:
+    with open(filepath, encoding='utf-8') as f:
+        entry = json.load(f)
+    report = entry.get('report', '')
+    date_str = entry.get('date', os.path.basename(filepath).replace('.json', ''))
+    if keyword.lower() in report.lower():
+        # 該当行を抽出
+        matching_lines = [line for line in report.splitlines() if keyword.lower() in line.lower()]
+        results.append({'date': date_str, 'matches': matching_lines})
+
+if not results:
+    print(f"「{keyword}」に一致する履歴が見つかりませんでした。")
+else:
+    print(f"「{keyword}」の検索結果: {len(results)} 件")
+    print()
+    for r in results:
+        print(f"## {r['date']}")
+        for line in r['matches']:
+            print(f"  {line.strip()}")
+        print()
+EOF
+```
+
+## Step 7: 週次・月次サマリーを集計する（`--summary` 指定時のみ）
+
+`--summary weekly` または `--summary monthly` が指定されている場合、過去のスタンドアップ履歴を集計してサマリーを表示します。
+このステップが指定された場合、通常の朝会・夕会（Step 1〜4）はスキップしてください。
+
+```bash
+SUMMARY_PERIOD="<--summary で指定された値: weekly または monthly>"
+python3 - <<EOF
+import os, json, glob, re
+from datetime import date, timedelta
+
+period = """${SUMMARY_PERIOD}"""
+history_dir = os.path.expanduser('~/.standup-history')
+
+if not os.path.isdir(history_dir):
+    print(f"履歴ディレクトリが見つかりません: {history_dir}")
+    print("--save オプションを使ってスタンドアップを保存してください。")
+    exit(0)
+
+today = date.today()
+if period == 'weekly':
+    since = today - timedelta(days=7)
+    label = '週次（直近7日）'
+else:
+    since = today - timedelta(days=30)
+    label = '月次（直近30日）'
+
+files = sorted(glob.glob(os.path.join(history_dir, '*.json')))
+entries = []
+
+for filepath in files:
+    with open(filepath, encoding='utf-8') as f:
+        entry = json.load(f)
+    date_str = entry.get('date', os.path.basename(filepath).replace('.json', ''))
+    try:
+        entry_date = date.fromisoformat(date_str)
+    except ValueError:
+        continue
+    if entry_date >= since:
+        entries.append(entry)
+
+if not entries:
+    print(f"{label}サマリー: 対象期間の履歴がありません（{since} 〜 {today}）")
+    exit(0)
+
+print(f"# {label}スタンドアップサマリー")
+print(f"期間: {since} 〜 {today}（{len(entries)} 件）")
+print()
+
+# 「今日やったこと」セクションの内容を収集
+done_items = []
+todo_items = []
+for entry in entries:
+    report = entry.get('report', '')
+    date_str = entry.get('date', '')
+    lines = report.splitlines()
+    section = None
+    for line in lines:
+        if line.startswith('# 今日やったこと') or line.startswith('# やったこと'):
+            section = 'done'
+        elif line.startswith('# 明日やること') or line.startswith('# 次にやること'):
+            section = 'todo'
+        elif line.startswith('#'):
+            section = None
+        elif section == 'done' and line.startswith('-'):
+            done_items.append(f"[{date_str}] {line.strip()}")
+        elif section == 'todo' and line.startswith('-') and line.strip() != '-':
+            todo_items.append(f"[{date_str}] {line.strip()}")
+
+print(f"## 実施した作業（{len(done_items)} 件）")
+for item in done_items:
+    print(item)
+
+print()
+print(f"## 翌日タスク（{len(todo_items)} 件）")
+for item in todo_items:
+    print(item)
+EOF
+```
+
+## Step 5: HTML エクスポート（`--export html` オプション指定時のみ）
+
+`--export html` フラグが指定されている場合のみ、このステップを実行してください。
+
+### 5-1: 出力ファイルパスを決定する
+
+```bash
+EXPORT_DIR="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+EXPORT_TIMESTAMP="$(date +%Y%m%d-%H%M%S)"
+EXPORT_FILE="${EXPORT_FILE:-$EXPORT_DIR/standup-$EXPORT_TIMESTAMP.html}"
+```
+
+**注意**: `EXPORT_FILE` 環境変数が未設定の場合はリポジトリルートにタイムスタンプ付きのファイル名で生成します。
+`/tmp/standup-report.html` のような共有パスへのデフォルトは避けてください（上書きリスクがあるため）。
+
+### 5-2: HTML ファイルを生成する
+
+**重要**: `STANDUP_REPORT` 環境変数と `EXPORT_FILE` 環境変数をセットしてから `python3` を実行してください。
+`STANDUP_REPORT` が未設定・空の場合はエラーを出力して終了します。
+
+```bash
+python3 - <<'PYEOF'
+import sys, os, re, datetime
+
+report = os.environ.get('STANDUP_REPORT', '')
+export_file = os.environ.get('EXPORT_FILE', '')
+timestamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+# STANDUP_REPORT が空の場合はエラーで終了する
+if not report.strip():
+    print('エラー: STANDUP_REPORT 環境変数が未設定または空です。', file=sys.stderr)
+    print('使用方法: STANDUP_REPORT="<レポート内容>" EXPORT_FILE="<出力先パス>" python3 ...', file=sys.stderr)
+    sys.exit(1)
+
+# EXPORT_FILE が未設定の場合は安全なデフォルトを使用する
+if not export_file.strip():
+    print('警告: EXPORT_FILE 環境変数が未設定です。カレントディレクトリに保存します。', file=sys.stderr)
+    export_file = os.path.join(os.getcwd(), f'standup-{datetime.datetime.now().strftime("%Y%m%d-%H%M%S")}.html')
+
+# マークダウンを簡易 HTML に変換する
+def md_to_html(text):
+    lines = text.split('\n')
+    html_lines = []
+    in_list = False
+    for line in lines:
+        if line.startswith('# '):
+            if in_list:
+                html_lines.append('</ul>')
+                in_list = False
+            html_lines.append(f'<h1>{line[2:]}</h1>')
+        elif line.startswith('## '):
+            if in_list:
+                html_lines.append('</ul>')
+                in_list = False
+            html_lines.append(f'<h2>{line[3:]}</h2>')
+        elif line.startswith('### '):
+            if in_list:
+                html_lines.append('</ul>')
+                in_list = False
+            html_lines.append(f'<h3>{line[4:]}</h3>')
+        elif line.startswith('- '):
+            if not in_list:
+                html_lines.append('<ul>')
+                in_list = True
+            html_lines.append(f'<li>{line[2:]}</li>')
+        elif line.strip() == '---':
+            if in_list:
+                html_lines.append('</ul>')
+                in_list = False
+            html_lines.append('<hr>')
+        elif line.strip() == '':
+            if in_list:
+                html_lines.append('</ul>')
+                in_list = False
+            html_lines.append('')
+        else:
+            if in_list:
+                html_lines.append('</ul>')
+                in_list = False
+            html_lines.append(f'<p>{line}</p>')
+    if in_list:
+        html_lines.append('</ul>')
+    return '\n'.join(html_lines)
+
+body_html = md_to_html(report)
+
+html = f"""<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>スタンドアップレポート {timestamp}</title>
+  <style>
+    body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 800px; margin: 40px auto; padding: 0 20px; color: #333; line-height: 1.6; }}
+    h1 {{ color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 8px; }}
+    h2 {{ color: #34495e; border-bottom: 1px solid #bdc3c7; padding-bottom: 4px; }}
+    h3 {{ color: #7f8c8d; }}
+    ul {{ padding-left: 1.5em; }}
+    li {{ margin: 4px 0; }}
+    hr {{ border: none; border-top: 1px solid #ecf0f1; margin: 20px 0; }}
+    .meta {{ color: #95a5a6; font-size: 0.85em; margin-bottom: 24px; }}
+  </style>
+</head>
+<body>
+  <div class="meta">生成日時: {timestamp}</div>
+  {body_html}
+</body>
+</html>"""
+
+with open(export_file, 'w', encoding='utf-8') as f:
+    f.write(html)
+print(f'exported:{export_file}')
+PYEOF
+```
+
+出力に `exported:` が含まれる場合はエクスポート成功として `EXPORT_FILE` を取得し、
+「📄 HTML レポートを保存しました: `<パス>`」と出力してください。
 失敗した場合はエラーメッセージを表示してスキップしてください。
+
+### 5-3: ブラウザで自動オープンする（`--open` オプション指定時のみ）
+
+`--open` フラグが指定されている場合のみ実行します：
+
+```bash
+# OS に応じてブラウザを開くコマンドを選択する
+if command -v xdg-open >/dev/null 2>&1; then
+  xdg-open "$EXPORT_FILE"
+elif command -v open >/dev/null 2>&1; then
+  open "$EXPORT_FILE"
+elif command -v explorer.exe >/dev/null 2>&1; then
+  # WSL
+  WINDOWS_PATH=$(wslpath -w "$EXPORT_FILE")
+  explorer.exe "$WINDOWS_PATH"
+else
+  echo "ブラウザを自動オープンできません。ファイルを手動で開いてください: $EXPORT_FILE"
+fi
+```
+
+「🌐 ブラウザでレポートを開きました」と出力してください。
 
 ## コミュニケーションスタイル
 
@@ -275,6 +608,37 @@ fi
 - 「〜ですね」「なるほど」など相槌を自然に入れる
 - **1回に1つの質問だけする（質問を重ねない）**
 - 励ましやポジティブなフィードバックを適度に入れる
+
+## Webhook URL のセキュリティ設定
+
+Slack/Discord などへの通知に Webhook URL を使用する場合、以下のセキュリティ上の注意を守ってください。
+
+### 環境変数を優先して使用する
+
+Webhook URL は設定ファイルではなく環境変数から読み込むことを推奨します：
+
+```bash
+# 推奨: 環境変数で設定する
+export STANDUP_WEBHOOK_URL="https://hooks.slack.com/services/..."
+
+# スクリプト内での読み込み順序（環境変数を優先、config はフォールバック）
+WEBHOOK_URL="${STANDUP_WEBHOOK_URL:-$(jq -r '.webhookUrl // empty' .standup-config.json 2>/dev/null)}"
+```
+
+### .standup-config.json を .gitignore に追加する
+
+`.standup-config.json` に Webhook URL などの機密情報を記載する場合は、必ずリポジトリへのコミットを防いでください：
+
+```bash
+# .gitignore に追加されているか確認する
+grep -q '.standup-config.json' .gitignore || echo '.standup-config.json' >> .gitignore
+```
+
+### 注意事項
+
+- Webhook URL は秘密情報です。リポジトリに平文でコミットしないでください
+- `.standup-config.json` は `.gitignore` に追加してください（このリポジトリでは設定済み）
+- 万一 Webhook URL が漏洩した場合は、即座に Slack/Discord 側でトークンを無効化してください
 
 ## コードレビューについて
 
