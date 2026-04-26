@@ -60,6 +60,7 @@ Claude Code で以下のように呼び出します：
 | `--summary weekly\|monthly` | 週次・月次サマリーを表示 |
 | `--export html` | HTML ファイルとしてエクスポート |
 | `--notify` | Slack/Discord Webhook に送信 |
+| `--notify chatwork` | Chatwork API v2 でルームに送信 |
 | `--template <path>` | カスタムテンプレートを使用 |
 
 ### 前提条件
@@ -75,6 +76,30 @@ Claude Code で以下のように呼び出します：
 cd claude-hurikaeri
 git pull
 cp -r skills/standup ~/.claude/skills/standup
+```
+
+## Chatwork 連携
+
+Chatwork へのスタンドアップ通知を設定するには、以下の環境変数を設定してください。
+
+```bash
+# Chatwork API トークン（Chatwork の「サービス連携」→「API トークン」で取得）
+export STANDUP_CHATWORK_TOKEN="your_api_token"
+
+# 送信先ルーム ID（URL の #!rid の後の数字）
+export STANDUP_CHATWORK_ROOM_ID="123456"
+```
+
+設定後、`--notify chatwork` オプションで通知できます：
+
+```bash
+/standup evening --notify chatwork
+```
+
+スクリプトを直接呼び出すこともできます：
+
+```bash
+skills/standup/chatwork-notify.sh "レポートテキスト"
 ```
 
 ## セキュリティ上の注意
