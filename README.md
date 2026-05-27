@@ -61,6 +61,7 @@ Claude Code で以下のように呼び出します：
 | `--export html` | HTML ファイルとしてエクスポート |
 | `--notify` | Slack/Discord Webhook に送信 |
 | `--notify chatwork` | Chatwork API v2 でルームに送信 |
+| `--notify lineworks` | LINE WORKS Bot API v2 でチャンネルに送信 |
 | `--template <path>` | カスタムテンプレートを使用 |
 
 ### 前提条件
@@ -100,6 +101,36 @@ export STANDUP_CHATWORK_ROOM_ID="123456"
 
 ```bash
 skills/standup/chatwork-notify.sh "レポートテキスト"
+```
+
+## LINE WORKS 連携
+
+LINE WORKS へのスタンドアップ通知を設定するには、以下の環境変数を設定してください。
+
+```bash
+# LINE WORKS Developer Console で取得した Client ID
+export STANDUP_LINE_WORKS_CLIENT_ID="your_client_id"
+
+# LINE WORKS Developer Console で取得した Client Secret
+export STANDUP_LINE_WORKS_CLIENT_SECRET="your_client_secret"
+
+# Bot 番号（Bot 設定画面で確認）
+export STANDUP_LINE_WORKS_BOT_NO="your_bot_no"
+
+# 送信先チャンネル ID
+export STANDUP_LINE_WORKS_CHANNEL_ID="your_channel_id"
+```
+
+設定後、`--notify lineworks` オプションで通知できます：
+
+```bash
+/standup evening --notify lineworks
+```
+
+スクリプトを直接呼び出すこともできます：
+
+```bash
+skills/standup/lineworks-notify.sh "レポートテキスト"
 ```
 
 ## セキュリティ上の注意
