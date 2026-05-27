@@ -10,7 +10,8 @@ description: >
   Supports --template option to customize the report format with a Markdown template.
   Supports --notify option to post the report to Slack/Discord via Webhook URL.
   Supports --notify chatwork option to post the report to Chatwork via API v2.
-argument-hint: "[morning|evening] [hours] [repo_path1 repo_path2 ...] [--save] [--export html] [--open] [--notify [chatwork]] [--search <keyword>] [--summary weekly|monthly] [--template <path>]"
+  Supports --notify lineworks option to post the report to LINE WORKS via Bot API v2.
+argument-hint: "[morning|evening] [hours] [repo_path1 repo_path2 ...] [--save] [--export html] [--open] [--notify [chatwork|lineworks]] [--search <keyword>] [--summary weekly|monthly] [--template <path>]"
 ---
 
 # Standup Meeting Skill（朝会・夕会）
@@ -40,6 +41,7 @@ argument-hint: "[morning|evening] [hours] [repo_path1 repo_path2 ...] [--save] [
 - `--open` → エクスポート後にブラウザで自動オープンする（`--export html` と併用）
 - `--notify` → レポート完了後に Slack/Discord Webhook に投稿する
 - `--notify chatwork` → レポート完了後に Chatwork API v2 で指定ルームに投稿する（環境変数 `STANDUP_CHATWORK_TOKEN` と `STANDUP_CHATWORK_ROOM_ID` が必要）
+- `--notify lineworks` → レポート完了後に LINE WORKS Bot API v2 でチャンネルに投稿する（環境変数 `STANDUP_LINE_WORKS_CLIENT_ID`、`STANDUP_LINE_WORKS_CLIENT_SECRET`、`STANDUP_LINE_WORKS_BOT_NO`、`STANDUP_LINE_WORKS_CHANNEL_ID` が必要）
 - `--save` → スタンドアップレポートを `~/.standup-history/YYYY-MM-DD-morning-<repo>.json` または `~/.standup-history/YYYY-MM-DD-evening-<repo>.json` に保存する（`~` はそのユーザーの HOME ディレクトリ）
 - `--search <keyword>` → 過去のスタンドアップ履歴からキーワード検索して結果を表示する（朝会・夕会は実施しない）
 - `--summary weekly` → 過去7日分のスタンドアップ履歴を週次サマリーとして集計・表示する（朝会・夕会は実施しない）
@@ -753,6 +755,57 @@ export STANDUP_CHATWORK_RETRY=3
 
 # リトライ間隔（秒、デフォルト: 2）
 export STANDUP_CHATWORK_RETRY_INTERVAL=2
+```
+
+## LINE WORKS 通知の設定
+
+`--notify lineworks` オプションを使用する場合、以下の環境変数を設定してください。
+
+### 環境変数
+
+```bash
+export STANDUP_LINE_WORKS_CLIENT_ID="your_client_id"
+export STANDUP_LINE_WORKS_CLIENT_SECRET="your_client_secret"
+export STANDUP_LINE_WORKS_BOT_NO="your_bot_no"
+export STANDUP_LINE_WORKS_CHANNEL_ID="your_channel_id"
+```
+
+### Developer Console での設定手順
+
+1. [LINE WORKS Developer Console](https://developers.worksmobile.com/) にアクセスする
+2. アプリを作成し、「Bot」を追加する
+3. 「OAuth」設定で Client ID と Client Secret を取得する
+4. Bot の「Bot 番号」を確認する（URL または Bot 設定画面）
+5. 通知先チャンネルの ID を確認する（チャンネル詳細画面または API レスポンス）
+
+### チャンネル ID の確認方法
+
+LINE WORKS の Bot API で `/v1.0/bots/{botNo}/channels` エンドポイントを呼び出すと、
+チャンネル一覧と ID を取得できます。
+
+### 使用例
+
+```bash
+export STANDUP_LINE_WORKS_CLIENT_ID="abc123"
+export STANDUP_LINE_WORKS_CLIENT_SECRET="xyz789"
+export STANDUP_LINE_WORKS_BOT_NO="12345"
+export STANDUP_LINE_WORKS_CHANNEL_ID="67890"
+
+# LINE WORKS に通知する
+/standup evening --notify lineworks
+
+# 直接スクリプトを呼び出す場合
+skills/standup/lineworks-notify.sh "本日のスタンドアップレポート..."
+```
+
+### オプション環境変数
+
+```bash
+# リトライ回数（デフォルト: 3）
+export STANDUP_LINE_WORKS_RETRY=3
+
+# リトライ間隔（秒、デフォルト: 2）
+export STANDUP_LINE_WORKS_RETRY_INTERVAL=2
 ```
 
 ## コードレビューについて
