@@ -1,0 +1,43 @@
+name: Skill Test
+
+on:
+  push:
+    paths:
+      - 'skills/**'
+      - '.github/workflows/skill-test.yml'
+  pull_request:
+    paths:
+      - 'skills/**'
+      - '.github/workflows/skill-test.yml'
+
+jobs:
+  syntax-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Bash syntax check (all skill scripts)
+        run: |
+          find skills/ -name "*.sh" -exec bash -n {} \; && echo "All scripts passed syntax check"
+
+  shellcheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install shellcheck
+        run: sudo apt-get install -y shellcheck
+      - name: Run shellcheck on skill scripts
+        run: |
+          find skills/ -name "*.sh" | xargs shellcheck --severity=warning
+
+  skill-md-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check SKILL.md files exist for each skill directory
+        run: |
+          for dir in skills/*/; do
+            if [ ! -f "${dir}SKILL.md" ]; then
+              echo "MISSING SKILL.md in ${dir}" && exit 1
+            fi
+          done
+          echo "All skill directories have SKILL.md"
