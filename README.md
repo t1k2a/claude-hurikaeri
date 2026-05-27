@@ -19,17 +19,52 @@ GitHub リポジトリから以下の情報を自動収集し、スクラムマ�
 
 ## インストール
 
+### 前提条件
+
+| ツール | 必須？ | OS 別インストール |
+|--------|--------|------------------|
+| Git 2.30+ | ✅ 必須 | macOS: `brew install git` / Ubuntu・WSL: `sudo apt install git` |
+| GitHub CLI (`gh`) | ⭕️ オプション | macOS: `brew install gh` / Ubuntu・WSL: [公式手順](https://github.com/cli/cli/blob/trunk/docs/install_linux.md) |
+| Bash 4.0+ | ✅ 必須 | macOS: `brew install bash` / Ubuntu・WSL: `sudo apt install bash` |
+| curl | ✅ 必須（Webhook使用時） | macOS: 標準搭載 / Ubuntu・WSL: `sudo apt install curl` |
+
+> **WSL ユーザーへ:** 文字化けが発生する場合は `.bashrc` に `export LANG=ja_JP.UTF-8` を追加してください。
+
+### インストール手順
+
 ```bash
-# リポジトリをクローン
+# 1. リポジトリをクローン
 git clone https://github.com/t1k2a/claude-hurikaeri.git
 
-# 個人用（全プロジェクトで使える）
+# 2a. 個人用（全プロジェクトで使える）
 mkdir -p ~/.claude/skills/
 cp -r claude-hurikaeri/skills/standup ~/.claude/skills/
 
-# または、プロジェクト用（特定プロジェクトのみ）
+# 2b. または、プロジェクト用（特定プロジェクトのみ）
 mkdir -p <your-project>/.claude/skills/
 cp -r claude-hurikaeri/skills/standup <your-project>/.claude/skills/
+
+# 3. 動作確認
+bash -n ~/.claude/skills/standup/chatwork-notify.sh && echo "インストール成功"
+```
+
+### Webhook 通知の設定
+
+通知を送信する場合、事前に環境変数を設定してください：
+
+```bash
+# Slack / Discord
+export STANDUP_WEBHOOK_URL="https://hooks.slack.com/services/YOUR/WEBHOOK/URL"
+
+# Chatwork（--notify chatwork オプション使用時）
+export STANDUP_CHATWORK_TOKEN="your_api_token"
+export STANDUP_CHATWORK_ROOM_ID="123456"
+
+# Microsoft Teams（--notify teams オプション使用時）
+export STANDUP_TEAMS_WEBHOOK_URL="https://prod-XX.westus.logic.azure.com/..."
+
+# 永続化（.bashrc / .zshrc に追加）
+echo 'export STANDUP_WEBHOOK_URL="..."' >> ~/.bashrc
 ```
 
 ## 使い方
@@ -115,10 +150,41 @@ export STANDUP_WEBHOOK_URL="https://hooks.slack.com/services/..."
 ## よくある質問
 
 **Q: プライベートリポジトリでも使える？**
-A: はい。`gh` CLI が認証済みなら、プライベートリポジトリの PR/Issue も取得できます。
+A: はい。`gh auth login` で認証済みであれば、プライベートリポジトリの PR/Issue も取得できます。
 
 **Q: どのリポジトリでも使える？**
 A: Git リポジトリであれば使えます。GitHub 連携機能（PR、Issue）は GitHub リポジトリでのみ動作します。
+
+**Q: cron で自動実行できる？**
+A: はい。`cron-standup.sh` を使用してください。cron は環境変数を引き継がないため、スクリプト内で設定する必要があります：
+```bash
+# crontab -e に追加する例（平日 9:00 に朝会レポートを送信）
+STANDUP_WEBHOOK_URL="https://hooks.slack.com/services/..."
+0 9 * * 1-5 bash ~/.claude/skills/standup/cron-standup.sh
+```
+
+**Q: Webhook が届かない**
+A: 以下を確認してください：
+1. `echo $STANDUP_WEBHOOK_URL` で URL が設定されているか確認
+2. `curl -s -o /dev/null -w "%{http_code}" -X POST "$STANDUP_WEBHOOK_URL" -d '{"text":"test"}'` で HTTP 200 が返るか確認
+3. ファイアウォール・プロキシ設定を確認
+
+**Q: WSL で文字化けする**
+A: `.bashrc` に以下を追加してください：
+```bash
+export LANG=ja_JP.UTF-8
+export LC_ALL=ja_JP.UTF-8
+```
+
+**Q: チーム複数人で使うには？**
+A: `team-summary.sh` を使用してください：
+```bash
+bash ~/.claude/skills/standup/team-summary.sh \
+  /path/to/member1-repo \
+  /path/to/member2-repo
+```
+
+詳細は [CONTRIBUTING.md](./CONTRIBUTING.md) を参照してください。
 
 ## Custom Setup / カスタム構築のご相談
 
