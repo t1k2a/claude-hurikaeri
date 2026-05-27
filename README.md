@@ -17,6 +17,21 @@ GitHub リポジトリから以下の情報を自動収集し、スクラムマ�
 - 未コミットの差分
 - Pull Request の状態（オープン、マージ済み、レビュー待ち）
 
+## クイックスタート（5分で始める）
+
+```bash
+# 1. リポジトリをクローンしてスキルをインストール
+git clone https://github.com/t1k2a/claude-hurikaeri.git
+mkdir -p ~/.claude/skills/
+cp -r claude-hurikaeri/skills/standup ~/.claude/skills/
+
+# 2. Claude Code を起動して朝会を始める
+/standup morning
+# または自然言語で: 「朝会を始めましょう」
+```
+
+これだけで始められます。GitHub CLI (`gh`) がインストール済みなら PR/Issue も自動収集されます。
+
 ## インストール
 
 ```bash
@@ -61,6 +76,7 @@ Claude Code で以下のように呼び出します：
 | `--export html` | HTML ファイルとしてエクスポート |
 | `--notify` | Slack/Discord Webhook に送信 |
 | `--notify chatwork` | Chatwork API v2 でルームに送信 |
+| `--notify lineworks` | LINE WORKS Bot API v2 でチャンネルに送信 |
 | `--template <path>` | カスタムテンプレートを使用 |
 
 ### 前提条件
@@ -119,6 +135,36 @@ A: はい。`gh` CLI が認証済みなら、プライベートリポジトリ�
 
 **Q: どのリポジトリでも使える？**
 A: Git リポジトリであれば使えます。GitHub 連携機能（PR、Issue）は GitHub リポジトリでのみ動作します。
+
+**Q: 「SKIP: Git リポジトリではありません」と表示される**
+A: 対象ディレクトリが Git リポジトリではありません。`git init` または正しいリポジトリパスを指定してください。
+
+**Q: 「GitHub CLI がインストールされていないため、PR情報は取得できませんでした」と表示される**
+A: `gh` CLI がインストールされていない場合の正常なメッセージです。Git のコミット情報は取得できます。PR/Issue も取得したい場合は以下でインストールしてください：
+```bash
+# macOS
+brew install gh && gh auth login
+
+# Linux
+sudo apt install gh && gh auth login
+```
+
+**Q: 「スキル 'standup' が見つかりません」と表示される**
+A: スキルのインストールパスを確認してください。`~/.claude/skills/standup/SKILL.md` が存在することを確認してください：
+```bash
+ls ~/.claude/skills/standup/SKILL.md
+```
+
+**Q: Webhook 通知が届かない**
+A: 環境変数が正しく設定されているか確認してください：
+```bash
+# Slack の場合
+echo $STANDUP_WEBHOOK_URL
+
+# Chatwork の場合
+echo $STANDUP_CHATWORK_TOKEN
+echo $STANDUP_CHATWORK_ROOM_ID
+```
 
 ## Custom Setup / カスタム構築のご相談
 
