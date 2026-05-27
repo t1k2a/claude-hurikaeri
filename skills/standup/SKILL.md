@@ -755,6 +755,58 @@ export STANDUP_CHATWORK_RETRY=3
 export STANDUP_CHATWORK_RETRY_INTERVAL=2
 ```
 
+## Microsoft Teams 通知の設定
+
+`--notify teams` オプションを使用する場合、以下の環境変数を設定してください。
+
+### 環境変数
+
+```bash
+export STANDUP_TEAMS_WEBHOOK_URL="https://prod-xx.westus.logic.azure.com/..."
+```
+
+### Webhook URL の取得方法
+
+Microsoft Incoming Webhook は2026年末に廃止予定のため、**Microsoft Workflows (Power Automate)** を使用してください。
+
+1. Teams チャンネルを開く
+2. チャンネル名横の「...」→ 「Workflows」をクリックする
+3. 「Post to a channel when a webhook request is received」テンプレートを選択する
+4. フロー名を設定し、送信先チャンネルを確認して「追加」をクリックする
+5. 生成された Webhook URL をコピーして `STANDUP_TEAMS_WEBHOOK_URL` に設定する
+
+### ペイロード形式の選択
+
+```bash
+# Adaptive Card 形式（リッチ表示、推奨）
+export STANDUP_TEAMS_PAYLOAD_TYPE="adaptive_card"
+
+# シンプルテキスト形式（フォールバック）
+export STANDUP_TEAMS_PAYLOAD_TYPE="text"  # デフォルト
+```
+
+### 使用例
+
+```bash
+export STANDUP_TEAMS_WEBHOOK_URL="https://prod-xx.westus.logic.azure.com/..."
+
+# Teams に通知する
+/standup evening --notify teams
+
+# 直接スクリプトを呼び出す場合
+skills/standup/teams-notify.sh "本日のスタンドアップレポート..."
+```
+
+### オプション環境変数
+
+```bash
+# リトライ回数（デフォルト: 3）
+export STANDUP_TEAMS_RETRY=3
+
+# リトライ間隔（秒、デフォルト: 2）
+export STANDUP_TEAMS_RETRY_INTERVAL=2
+```
+
 ## コードレビューについて
 
 - 差分に気になる点があれば軽く触れる
