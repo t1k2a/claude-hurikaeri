@@ -10,7 +10,7 @@ description: >
   Supports --template option to customize the report format with a Markdown template.
   Supports --notify option to post the report to Slack/Discord via Webhook URL.
   Supports --notify chatwork option to post the report to Chatwork via API v2.
-argument-hint: "[morning|evening] [hours] [repo_path1 repo_path2 ...] [--save] [--export html] [--open] [--notify [chatwork]] [--search <keyword>] [--summary weekly|monthly] [--template <path>]"
+argument-hint: "[morning|evening] [hours] [repo_path1 repo_path2 ...] [--save] [--export html] [--open] [--notify [chatwork]] [--search <keyword>] [--summary weekly|monthly] [--template <path>|daily|weekly|monthly]"
 ---
 
 # Standup Meeting Skill（朝会・夕会）
@@ -45,6 +45,9 @@ argument-hint: "[morning|evening] [hours] [repo_path1 repo_path2 ...] [--save] [
 - `--summary weekly` → 過去7日分のスタンドアップ履歴を週次サマリーとして集計・表示する（朝会・夕会は実施しない）
 - `--summary monthly` → 過去30日分のスタンドアップ履歴を月次サマリーとして集計・表示する（朝会・夕会は実施しない）
 - `--template <path>` → 指定した Markdown テンプレートファイルをレポートフォーマットとして使用する（省略時はデフォルトフォーマットを使用）
+- `--template daily` → 日本語日報テンプレート（`skills/standup/templates/daily-report-ja.md`）を使用してレポートを生成する
+- `--template weekly` → 日本語週報テンプレート（`skills/standup/templates/weekly-report-ja.md`）を使用してレポートを生成する
+- `--template monthly` → 日本語月報テンプレート（`skills/standup/templates/monthly-report-ja.md`）を使用してレポートを生成する
 
 解釈した結果：
 1. **モード**: `morning` または `evening`（デフォルト: `morning`）
@@ -62,6 +65,9 @@ argument-hint: "[morning|evening] [hours] [repo_path1 repo_path2 ...] [--save] [
 8. **検索キーワード**: `--search <keyword>` が含まれる場合はそのキーワード
 9. **サマリー期間**: `--summary weekly` または `--summary monthly` が含まれる場合はその値
 10. **テンプレートパス**: `--template <path>` が含まれる場合はそのパス（デフォルト: なし）
+    - `--template daily` → `skills/standup/templates/daily-report-ja.md` に解決する
+    - `--template weekly` → `skills/standup/templates/weekly-report-ja.md` に解決する
+    - `--template monthly` → `skills/standup/templates/monthly-report-ja.md` に解決する
 
 `--search` または `--summary` が指定された場合は Step 5〜7 のみ実行し、通常の朝会・夕会（Step 1〜4）はスキップしてください。
 
