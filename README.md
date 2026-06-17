@@ -61,6 +61,7 @@ Claude Code で以下のように呼び出します：
 | `--export html` | HTML ファイルとしてエクスポート |
 | `--notify` | Slack/Discord Webhook に送信 |
 | `--notify chatwork` | Chatwork API v2 でルームに送信 |
+| `--notify teams` | Microsoft Teams Webhook に送信 |
 | `--template <path>` | カスタムテンプレートを使用 |
 
 ### 前提条件
@@ -100,6 +101,34 @@ export STANDUP_CHATWORK_ROOM_ID="123456"
 
 ```bash
 skills/standup/chatwork-notify.sh "レポートテキスト"
+```
+
+## Microsoft Teams 連携
+
+Microsoft Teams へのスタンドアップ通知を設定するには、以下の環境変数を設定してください。
+
+> **注意**: Microsoft Incoming Webhook は2026年末廃止予定のため、**Microsoft Workflows (Power Automate)** をご利用ください。
+
+```bash
+# Microsoft Workflows (Power Automate) の Webhook URL
+export STANDUP_TEAMS_WEBHOOK_URL="https://prod-xx.westus.logic.azure.com/..."
+```
+
+Webhook URL の取得方法：
+1. Teams チャンネル → 「...」→ 「Workflows」
+2. 「Post to a channel when a webhook request is received」を選択
+3. 生成された URL を環境変数に設定する
+
+設定後、`--notify teams` オプションで通知できます：
+
+```bash
+/standup evening --notify teams
+```
+
+スクリプトを直接呼び出すこともできます：
+
+```bash
+skills/standup/teams-notify.sh "レポートテキスト"
 ```
 
 ## セキュリティ上の注意
