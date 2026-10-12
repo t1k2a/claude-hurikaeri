@@ -71,10 +71,10 @@ GitHub取得は対象リポジトリを作業ディレクトリに指定して�
 認証情報を表示しない。ログイン・新しい権限付与はユーザーが行う。
 
 ```text
-gh pr list --author @me --state open --limit 20 --json number,title,url,updatedAt
-gh pr list --author @me --state merged --limit 20 --json number,title,url,mergedAt
+gh pr list --author "@me" --state open --limit 20 --json number,title,url,updatedAt
+gh pr list --author "@me" --state merged --limit 20 --json number,title,url,mergedAt
 gh pr list --search "review-requested:@me" --state open --limit 20 --json number,title,url
-gh issue list --assignee @me --state open --limit 20 --json number,title,url
+gh issue list --assignee "@me" --state open --limit 20 --json number,title,url
 ```
 
 mergedAtを対象開始時刻〜収集時刻で絞る。時間外のPRを今日の成果に入れない。
