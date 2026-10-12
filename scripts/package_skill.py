@@ -15,6 +15,7 @@ FILES = {
 
 
 def build(root, output):
+    """Build a new ZIP from reviewed UTF-8 files; reject missing sources and existing output."""
     root, output = Path(root).resolve(), Path(output)
     entries = []
     for source, destination in FILES.items():

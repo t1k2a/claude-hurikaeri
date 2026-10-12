@@ -9,6 +9,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class PackageTests(unittest.TestCase):
     def builder(self):
+        """Load the packaging module without running its command-line entry point."""
         script = ROOT / 'scripts/package_skill.py'
         self.assertTrue(script.is_file(), 'A fixed-allowlist package builder is required')
         spec = importlib.util.spec_from_file_location('package_skill', script)
@@ -17,6 +18,7 @@ class PackageTests(unittest.TestCase):
         return module
 
     def test_only_reviewed_files_and_license_are_packaged(self):
+        """Exclude unrelated private files while preserving every allowlisted source byte."""
         builder = self.builder()
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
@@ -36,6 +38,7 @@ class PackageTests(unittest.TestCase):
                 self.assertNotIn(b'SENTINEL', b''.join(archive.read(n) for n in archive.namelist()))
 
     def test_missing_file_does_not_create_partial_archive(self):
+        """Fail before creating an archive when required source files are absent."""
         builder = self.builder()
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
@@ -45,6 +48,7 @@ class PackageTests(unittest.TestCase):
             self.assertFalse(output.exists())
 
     def test_existing_output_is_not_overwritten(self):
+        """Preserve an existing destination even when all package sources are valid."""
         builder = self.builder()
         with tempfile.TemporaryDirectory() as folder:
             output = Path(folder) / 'result.zip'
