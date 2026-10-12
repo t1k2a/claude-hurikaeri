@@ -23,8 +23,8 @@ Gitの作業記録を根拠に、今日の予定や次の一歩をユーザー�
 | 正の整数 `hours` | 対象時間を変更。0、負数、不明な指定は確認 |
 | リポジトリパス | 指定した場所だけ読む。省略時は現在の作業ディレクトリ |
 | `--save`, `--export html`, `--open` | 明示された保存・HTML出力・表示だけ行う |
-| `--search <keyword>`, `--summary weekly|monthly` | 保存済み履歴だけを読む。通常の収集や会話は行わない |
-| `--template <path>`, `--notify [slack|discord|chatwork]` | [追加操作](references/optional-operations.md)を参照 |
+| `--search <keyword>`, `--summary weekly\|monthly` | 保存済み履歴だけを読む。通常の収集や会話は行わない |
+| `--template <path>`, `--notify [slack\|discord\|chatwork]` | [追加操作](references/optional-operations.md)を参照 |
 
 オプションとその値を先に取り除いてから、残りをモード・時間・パスに分ける。
 引用された空白入りパスは1つとして扱う。`html`、検索語、テンプレートのパスを
