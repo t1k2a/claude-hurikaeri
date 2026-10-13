@@ -79,12 +79,10 @@ for MEMBER in "${MEMBERS[@]}"; do
   if command -v jq &>/dev/null; then
     TODAY="$(jq -r '.today // .today_plan // "" | if type == "array" then join(", ") else . end' "$JSON_FILE" 2>/dev/null || true)"
     BLOCKERS="$(jq -r '.blockers // .problems // "" | if type == "array" then join(", ") else . end' "$JSON_FILE" 2>/dev/null || true)"
-    YESTERDAY="$(jq -r '.yesterday // .done // "" | if type == "array" then join(", ") else . end' "$JSON_FILE" 2>/dev/null || true)"
   else
     # grep フォールバック（シンプルなフラット JSON のみ対応）
     TODAY="$(grep -oP '"today"\s*:\s*"\K[^"]+' "$JSON_FILE" 2>/dev/null | head -1 || true)"
     BLOCKERS="$(grep -oP '"blockers"\s*:\s*"\K[^"]+' "$JSON_FILE" 2>/dev/null | head -1 || true)"
-    YESTERDAY="$(grep -oP '"yesterday"\s*:\s*"\K[^"]+' "$JSON_FILE" 2>/dev/null | head -1 || true)"
   fi
 
   # 今日やること集約

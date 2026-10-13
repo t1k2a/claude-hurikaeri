@@ -1,134 +1,49 @@
-# Claude Standup（朝会・夕会アシスタント）
+# Dev Rewind
 
-> **English summary:** A Claude Code skill that auto-collects your GitHub activity (commits, diffs, PRs) and runs daily standup meetings (morning planning + evening retrospective) as a scrum master. Supports `/standup morning` and `/standup evening` commands.
->
-> Compatible with: Claude Code, OpenAI Codex CLI, Gemini CLI
+**Plan your day. Reflect on your work.**
 
-[![Claude Code Skill](https://img.shields.io/badge/Claude%20Code-Skill-blue?logo=anthropic)](https://github.com/t1k2a/claude-hurikaeri)
-[![skillsmp](https://img.shields.io/badge/skillsmp-Listed-green)](https://skillsmp.com)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+Gitの作業記録から、朝会で今日の予定を、夕会で次の一歩を整理するAgent Skillです。
+npmの `claude-hurikaeri-mcp` は別配布物であり、このSkillの実行には不要です。
 
-GitHub の作業状況を自動収集し、毎日の朝会・夕会を Claude と行うための Claude Code スキルです。
+## はじめる
 
-## 概要
+1. [SkillのREADME](skills/dev-rewind/README.md)で必要なGit/ホスト権限を確認します。
+2. `skills/dev-rewind` を使うエージェントのskillsディレクトリへフォルダごとコピーします。
+   Claude Codeは `~/.claude/skills/`、Codexは `~/.agents/skills/`。
+   [macOS/Linux・PowerShellの導入コマンド](skills/dev-rewind/README.md#リポジトリからコマンドで配置する場合)を利用できます。同名の配置先がある場合は停止します。
+3. 対象Gitリポジトリを開いて「Dev Rewindで朝会をして」と依頼します。
 
-GitHub リポジトリから以下の情報を自動収集し、スクラムマスターとして朝会・夕会を進めます：
-- コミット履歴と変更詳細
-- 未コミットの差分
-- Pull Request の状態（オープン、マージ済み、レビュー待ち）
+Claude Codeでは `/dev-rewind morning` / `/dev-rewind evening 8`。
+[架空の実行例](skills/dev-rewind/examples/synthetic-session.md)で入出力を確認できます。
 
-## インストール
+既定は指定repoのGit情報を読んで会話内にMarkdownを出すだけです。予定は本人に確認します。
+保存、クリップボード変更、外部通知を自動で行いません。
+PR/Issueを使う場合は認証済みGitHub CLIが必要です。ghがなくてもGitのみで続行します。
+コミット件名やファイル名は利用中のAIホストに渡るため、完全オフラインのツールではありません。
 
-```bash
-# リポジトリをクローン
-git clone https://github.com/t1k2a/claude-hurikaeri.git
+## 対応範囲
 
-# 個人用（全プロジェクトで使える）
-mkdir -p ~/.claude/skills/
-cp -r claude-hurikaeri/skills/standup ~/.claude/skills/
+ホスト非依存のSKILL.md手順と、Windows PowerShellでも呼べるGitコマンドを提供します。
+配置先は[Claude Code公式](https://code.claude.com/docs/en/skills)と
+[Codex公式](https://developers.openai.com/codex/skills/)を参照しています。
+WindowsのGitコマンドとパッケージテストは実行しますが、Claude Code/Codex/Gemini CLIの
+各アプリでのエンドツーエンド対応を保証するものではありません。詳細は[検証記録](docs/distribution.md)。
 
-# または、プロジェクト用（特定プロジェクトのみ）
-mkdir -p <your-project>/.claude/skills/
-cp -r claude-hurikaeri/skills/standup <your-project>/.claude/skills/
+## 配布ZIPの作成（メンテナー用）
+
+Python 3.9以上の標準ライブラリだけを使用します。Skill利用者にPythonは不要です。
+
+```text
+python -m unittest discover -s tests -v
+python scripts/package_skill.py --output ../dev-rewind-skill.zip
 ```
 
-## 使い方
-
-Claude Code で以下のように呼び出します：
-
-```bash
-# 朝会（過去24時間の情報を収集）
-/standup morning
-
-# 夕会（過去10時間の情報を収集）
-/standup evening
-
-# 時間を指定
-/standup morning 48
-
-# 自然言語でもOK
-「朝会を始めましょう」
-「今日の振り返りをしたい」
-```
-
-### オプション
-
-| オプション | 説明 |
-|-----------|------|
-| `--save` | レポートを `~/.standup-history/` に保存 |
-| `--search <keyword>` | 過去の履歴からキーワード検索 |
-| `--summary weekly\|monthly` | 週次・月次サマリーを表示 |
-| `--export html` | HTML ファイルとしてエクスポート |
-| `--notify` | Slack/Discord Webhook に送信 |
-| `--notify chatwork` | Chatwork API v2 でルームに送信 |
-| `--template <path>` | カスタムテンプレートを使用 |
-
-### 前提条件
-
-| ツール | 必須？ | 用途 |
-|--------|--------|------|
-| Git | ✅ 必須 | コミット履歴・差分取得 |
-| GitHub CLI (`gh`) | ⭕️ オプション | PR・Issue 取得（`brew install gh` → `gh auth login`） |
-
-## スキルの更新
-
-```bash
-cd claude-hurikaeri
-git pull
-cp -r skills/standup ~/.claude/skills/standup
-```
-
-## Chatwork 連携
-
-Chatwork へのスタンドアップ通知を設定するには、以下の環境変数を設定してください。
-
-```bash
-# Chatwork API トークン（Chatwork の「サービス連携」→「API トークン」で取得）
-export STANDUP_CHATWORK_TOKEN="your_api_token"
-
-# 送信先ルーム ID（URL の #!rid の後の数字）
-export STANDUP_CHATWORK_ROOM_ID="123456"
-```
-
-設定後、`--notify chatwork` オプションで通知できます：
-
-```bash
-/standup evening --notify chatwork
-```
-
-スクリプトを直接呼び出すこともできます：
-
-```bash
-skills/standup/chatwork-notify.sh "レポートテキスト"
-```
-
-## セキュリティ上の注意
-
-Webhook URL を使用する際は環境変数で設定してください：
-
-```bash
-export STANDUP_WEBHOOK_URL="https://hooks.slack.com/services/..."
-```
-
-設定ファイル `.standup-config.json` を使う場合は必ず `.gitignore` に追加してください。
-
-## よくある質問
-
-**Q: プライベートリポジトリでも使える？**
-A: はい。`gh` CLI が認証済みなら、プライベートリポジトリの PR/Issue も取得できます。
-
-**Q: どのリポジトリでも使える？**
-A: Git リポジトリであれば使えます。GitHub 連携機能（PR、Issue）は GitHub リポジトリでのみ動作します。
-
-## Custom Setup / カスタム構築のご相談
-
-Claude Code エージェントチームの自社導入・カスタム構築を承っています。
-
-- GitHub Discussions でお気軽にご相談ください → [Discussions を開く](https://github.com/t1k2a/claude-hurikaeri/discussions)
-- 対応内容: Agent Team のセットアップ、カスタムエージェント開発、運用保守
-
-> **For English speakers:** We offer consulting for custom Claude Code agent team setup. Open a Discussion or reach out via GitHub.
+作成先が存在する場合は上書きせず失敗します。
+固定リストのテキスト6ファイルだけを格納し、LICENSEはrootの原文を保持します。
+履歴、認証設定、実レポート、npm tarball、補助スクリプトは入りません。
+[出品紹介文・配布内容・公開前の未決事項](docs/distribution.md)を参照してください。
 
 ## ライセンス
 
-MIT
+[MIT License](LICENSE)。
+不具合報告はこのリポジトリのIssuesへ。
