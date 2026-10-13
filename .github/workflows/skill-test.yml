@@ -1,0 +1,55 @@
+name: Skill Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  shell-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install ShellCheck
+        run: sudo apt-get update && sudo apt-get install -y shellcheck
+      - name: Check skill entry points, Bash syntax and ShellCheck warnings
+        run: python scripts/check_skills.py --shellcheck shellcheck
+
+  test-and-package:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            python: '3.9'
+          - os: ubuntu-latest
+            python: '3.13'
+          - os: windows-latest
+            python: '3.13'
+          - os: macos-latest
+            python: '3.13'
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Require install-test shells
+        shell: bash
+        run: |
+          command -v sh
+          command -v bash
+          command -v powershell || command -v pwsh
+      - name: Run synthetic Git, install and package tests
+        run: python -m unittest discover -s tests -v
+      - name: Build reviewed distribution ZIP
+        run: python scripts/package_skill.py --output dev-rewind-ci.zip
+      - name: Check ZIP integrity
+        run: python -m zipfile -t dev-rewind-ci.zip

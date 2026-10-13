@@ -33,6 +33,10 @@ class PackageTests(unittest.TestCase):
             builder.build(root, output)
             with zipfile.ZipFile(output) as archive:
                 self.assertEqual(set(archive.namelist()), set(builder.FILES.values()))
+                self.assertEqual(len(archive.namelist()), len(builder.FILES))
+                self.assertIsNone(archive.testzip())
+                for source, destination in builder.FILES.items():
+                    self.assertEqual(archive.read(destination), (root / source).read_bytes())
                 self.assertEqual(archive.read('dev-rewind/LICENSE'), (ROOT / 'LICENSE').read_bytes())
                 self.assertEqual(archive.read('dev-rewind/SKILL.md').decode('utf-8').splitlines()[:2], ['---', 'name: dev-rewind'])
                 self.assertNotIn(b'SENTINEL', b''.join(archive.read(n) for n in archive.namelist()))
