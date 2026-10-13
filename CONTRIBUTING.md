@@ -1,431 +1,101 @@
-# Contributing to claude-hurikaeri
+# Dev Rewindへの貢献
 
-このプロジェクトへの貢献に興味を持っていただきありがとうございます。本ドキュメントでは、環境セットアップ・変更の提出・プロジェクト構造について説明します。
+Dev Rewindは、指定したGitリポジトリの作業状況を読み取り、朝の計画や夕方の振り返りを支援するテキスト形式のスキルです。バグ報告、説明の改善、再現可能なテストを歓迎します。
 
----
+## 利用と開発の準備
 
-## 目次
+利用者向けの導入・最初の実行は[スキルREADME](skills/dev-rewind/README.md)にまとめています。Claude CodeとCodexの配置先、macOS/Linux ShellとWindows PowerShellの安全なコピー例もそちらを参照してください。開発・テストだけなら個人用skillsフォルダへのインストールは不要です。
 
-1. [プロジェクト概要](#プロジェクト概要)
-2. [前提条件](#前提条件)
-3. [インストール](#インストール)
-4. [ディレクトリ構造](#ディレクトリ構造)
-5. [開発ワークフロー](#開発ワークフロー)
-6. [変更の提出](#変更の提出)
-7. [コーディングガイドライン](#コーディングガイドライン)
-8. [SKILL.md の記述ルール](#skillmd-の記述ルール)
-9. [テスト方法](#テスト方法)
-10. [Issue ラベル](#issue-ラベル)
-11. [FAQ](#faq)
+| 作業 | 必要なもの |
+| --- | --- |
+| ソースの取得・Gitテスト | Git |
+| 自動テスト・ZIP作成 | Python 3.9以上（標準ライブラリのみ） |
+| Shell検査 | BashとShellCheck（warning以上を失敗扱い） |
+| 導入例の検証 | POSIX ShellとPowerShell。WindowsではGit for WindowsのGit BashとWindows PowerShellを利用可能 |
+| スキルの実行確認 | 対応するエージェントと、その環境で許可されたGitアクセス |
+| GitHub情報の取得 | 必要な場合だけGitHub CLIなどの認証済み接続 |
 
----
+WSL、Node.js、npm、curlはPythonテストやコアスキルの導入には不要です。通知などの補助機能には別の前提条件があります。[任意操作の説明](skills/dev-rewind/references/optional-operations.md)を確認してください。npmのMCPサーバーはこのスキルZIPとは別の成果物です。
 
-## プロジェクト概要
+リポジトリをクローンした後、そのルートで作業します。Pythonのコマンド名が異なる環境では、以下の `python` を `python3` または `py -3` に読み替えてください。
 
-claude-hurikaeri は、GitHub の作業状況（コミット・差分・PR）を自動収集し、朝会・夕会をスクラムマスターとして進行する Claude Code スキルです。
+## 構成
 
-また、SKILL.md ベースのエージェント（CEO / Dev / Ops Division）が Issue の管理・開発サイクルを自律的に運営する自律型マルチエージェントシステムも含まれています。
-
----
-
-## 前提条件
-
-### 必須ツール
-
-| ツール | バージョン | 用途 |
-|--------|-----------|------|
-| Git | 2.30+ | バージョン管理 |
-| GitHub CLI (`gh`) | 2.0+ | PR・Issue 管理 |
-| Bash | 4.0+ | スキルスクリプト実行 |
-| Claude Code | 最新版 | SKILL.md エージェント実行 |
-| curl | 7.0+ | Webhook 送信 |
-
-### OS 別インストール手順
-
-#### macOS
-
-```bash
-# Homebrew 経由
-brew install git gh bash curl
-
-# GitHub CLI 認証
-gh auth login
+```text
+skills/dev-rewind/       スキル本体、README、テンプレート、参照文書、架空の例
+skills/standup/          互換エントリと既存の補助スクリプト
+scripts/                スキル検査・配布ZIP作成
+tests/                  合成データと一時ディレクトリによる自動テスト
+.github/workflows/      GitHub Actions
+docs/                   設計・配布に関する文書
+LICENSE                 MITライセンス
 ```
 
-#### Ubuntu / WSL (Windows Subsystem for Linux)
+現在の動作はmainにある実装とスキルREADMEで確認してください。未マージのPRや設計案を利用可能な機能として案内しないでください。
 
-```bash
-# 基本ツール
-sudo apt update && sudo apt install -y git curl bash
+## 変更の進め方
 
-# GitHub CLI
-curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
-echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
-sudo apt update && sudo apt install gh
+1. 既存Issueを確認し、バグなら再現手順・期待結果・実際の結果を整理します。OS、Python、Shell、使用したエージェントのバージョンも添えてください。
+2. 最新のmainから作業ブランチを作ります。例: `docs/improve-first-run`、`fix/package-validation`、`ci/skill-checks`。
+3. 問題に必要な範囲だけ変更し、不具合修正には失敗を再現するテストを追加します。
+4. 下記の検証を実施し、実行環境・結果・未検証範囲をPRに記載します。
+5. 通常のPRを作成し、レビューとCIの結果を確認します。関連Issueはリンクし、そのPRで完了する場合だけ `Closes #番号` を使います。
 
-# GitHub CLI 認証
-gh auth login
+タイトルと本文は日本語で構いません。タイトルは変更の目的を短く示し、本文には「問題と変更後の動作」「変更範囲」「検証と制約」を記載してください。テスト未実行を成功と記載しないでください。
+
+## スキルとコードの品質基準
+
+- `SKILL.md` のfrontmatterでは `name` と `description` を明確にし、descriptionに利用場面とトリガーを記述します。エージェント固有の追加項目は必須と決めつけません。
+- 本文では入力、出力、手順、実行例、情報が取得できない場合の扱いを示します。手順は初心者が順に実行できる粒度にします。
+- Gitの観測事実とユーザーの回答・推測を区別します。ログがないことを「作業していない」と断定しません。
+- コアは読み取り中心とし、外部送信、ファイル保存、Git変更などは対象と許可の条件を明記します。
+- READMEの導入手順を別文書に複製せず、正規の説明へリンクします。説明するコマンド・オプションは実装と一致させます。
+- Pythonは3.9以上で動く標準ライブラリを優先し、パスは `pathlib`、外部コマンドは引数配列と明示的な失敗判定を使います。
+- Shellではパス・変数を引用し、終了コードを伝播します。`set -euo pipefail` だけで全失敗を検出できるとは限らないため、不正入力のテストも行います。
+- 新しい依存や配布物を追加する場合は、ライセンスと配布対象を確認します。スキル本体に不要なサービス・モデルの導入を増やしません。
+
+## 検証
+
+リポジトリのルートで実行します。
+
+```text
+python -m unittest discover -s tests -v
 ```
 
-#### WSL 固有の注意事項
+Gitの読み取り、READMEの導入例、スキル検査、ZIPの許可リスト・元ファイル一致・上書き防止を検証します。テストは架空のリポジトリや一時領域を使い、実際の個人用skillsフォルダ、通知先、会話履歴には触れません。Shellが見つからずskipされたテストは未検証として報告してください。
 
-- Bash バージョンを確認: `bash --version`（4.0 未満の場合は `sudo apt install bash` で更新）
-- 文字化けが発生する場合は `export LANG=ja_JP.UTF-8` を `.bashrc` に追加
+BashとShellCheckがPATHにある場合:
 
----
-
-## インストール
-
-### 個人用（全プロジェクトで使える）
-
-```bash
-git clone https://github.com/t1k2a/claude-hurikaeri.git
-mkdir -p ~/.claude/skills/
-cp -r claude-hurikaeri/skills/standup ~/.claude/skills/
+```text
+python scripts/check_skills.py --shellcheck shellcheck
 ```
 
-### プロジェクト固有（特定プロジェクトのみ）
+WindowsでGit Bashを明示する場合（ShellCheckも実際の配置先に合わせる）:
 
-```bash
-git clone https://github.com/t1k2a/claude-hurikaeri.git
-mkdir -p <your-project>/.claude/skills/
-cp -r claude-hurikaeri/skills/standup <your-project>/.claude/skills/
+```powershell
+python scripts/check_skills.py --bash 'C:/Program Files/Git/bin/bash.exe' --shellcheck 'C:/tools/shellcheck.exe'
 ```
 
-### インストール確認
+この検査は各スキル直下の `SKILL.md` の存在を確認し、`skills/` 配下の全Shellスクリプトに構文検査とShellCheckを実行します。1ファイルの失敗でも非ゼロ終了します。補助スクリプトを本番データで実行する必要はありません。
 
-```bash
-# スキルが存在するか確認
-ls ~/.claude/skills/standup/
+配布候補は未使用の出力ファイル名を指定して作成します。
 
-# シンタックスチェック
-bash -n ~/.claude/skills/standup/chatwork-notify.sh && echo "OK"
-bash -n ~/.claude/skills/standup/team-summary.sh && echo "OK"
+```text
+python scripts/package_skill.py --output ../dev-rewind-review.zip
+python -m zipfile -t ../dev-rewind-review.zip
+git diff --check
 ```
 
-期待される結果: すべてのチェックで `OK` が表示される
+ZIP作成は既存の出力を上書きしません。中身は明示された6つのテキストファイルのみです。内容を変更した場合は、架空のサンプルだけであること、リンク、表現、ライセンスも目視確認してください。ZIPの生成やCI成功は、マーケット出品やエージェント上の動作確認を意味しません。
 
-### Webhook URL の設定
+CIではLinux上のShell検査、Linux（Python 3.9/3.13）・Windows・macOS（Python 3.13）の自動テストとZIP作成・整合性検査を行います。外部通知やスキルの自動インストールは行いません。
 
-Slack / Discord の場合:
+## プライバシーとレビュー前チェック
 
-```bash
-export STANDUP_WEBHOOK_URL="https://hooks.slack.com/services/YOUR/WEBHOOK/URL"
-```
+- [ ] 実会話、非公開業務データ、認証情報、個人用の絶対パスを例・テスト・ログ・ZIPに含めていない。
+- [ ] バグの再現には匿名化した最小例を使い、秘密情報を含むファイル本文を収集していない。
+- [ ] 変更に対応したテストとCIの結果を確認し、未検証のOS・エージェントを明記した。
+- [ ] 配布対象や権限を変えた場合は、理由と影響を説明した。
+- [ ] 実装されていない機能、未確認の掲載実績、サポート提供の約束を追加していない。
 
-Chatwork の場合:
-
-```bash
-export STANDUP_CHATWORK_TOKEN="your_api_token"
-export STANDUP_CHATWORK_ROOM_ID="123456"
-```
-
-LINE WORKS の場合:
-
-```bash
-export STANDUP_LINEWORKS_WEBHOOK_URL="https://hooks.worksmobile.com/..."
-```
-
-これらの環境変数を `.bashrc` / `.zshrc` に追加しておくと、毎回設定する手間が省けます。
-
----
-
-## ディレクトリ構造
-
-```
-claude-hurikaeri/
-├── skills/
-│   └── standup/
-│       ├── SKILL.md              # スキルのエントリポイント（Claude Code が読む）
-│       ├── chatwork-notify.sh    # Chatwork 通知スクリプト
-│       ├── team-summary.sh       # チームサマリー生成スクリプト
-│       └── default-template.md  # デフォルトレポートテンプレート
-├── docs/                         # 各種設計ドキュメント
-├── CONTRIBUTING.md               # 本ドキュメント
-├── README.md                     # ユーザー向けドキュメント
-└── LICENSE
-```
-
----
-
-## 開発ワークフロー
-
-### 1. Issue の確認
-
-作業前に既存の Issue を確認し、重複を避けてください。
-
-```bash
-gh issue list --state open
-```
-
-### 2. ブランチ作成
-
-**ブランチ命名規則:** `feature/issue-<Issue番号>-<簡潔な説明>`
-
-```bash
-# 例
-git checkout -b feature/issue-60-japanese-template
-git checkout -b fix/issue-38-error-handling
-git checkout -b docs/issue-56-contributing-guide
-```
-
-| プレフィックス | 用途 |
-|--------------|------|
-| `feature/` | 新機能追加 |
-| `fix/` | バグ修正 |
-| `docs/` | ドキュメント更新 |
-| `chore/` | リファクタリング・設定変更 |
-
-### 3. 実装・テスト
-
-変更を実装し、[テスト方法](#テスト方法) に従ってテストを実行してください。
-
-### 4. コミット
-
-```bash
-git add <変更ファイル>
-git commit -m "feat: <変更内容の簡潔な説明> #<Issue番号>"
-```
-
-**コミットメッセージ規則:**
-
-| プレフィックス | 用途 |
-|--------------|------|
-| `feat:` | 新機能 |
-| `fix:` | バグ修正 |
-| `docs:` | ドキュメント |
-| `chore:` | その他（リファクタリング等） |
-| `ci:` | CI/CD 設定 |
-
----
-
-## 変更の提出
-
-### PR の作成
-
-```bash
-git push origin feature/issue-XX-your-feature
-gh pr create --title "feat: <タイトル> #<Issue番号>" --body "..."
-```
-
-### PR チェックリスト
-
-PR を作成する前に以下を確認してください：
-
-- [ ] `bash -n` シンタックスチェックがすべて通過する
-- [ ] 環境変数未設定時に分かりやすいエラーメッセージが表示される
-- [ ] `SKILL.md` が新機能・オプションに合わせて更新されている
-- [ ] `README.md` にユーザー向けの説明が追記されている
-- [ ] 対応する Issue 番号が PR 本文に `Closes #XX` 形式で記載されている
-
-### PR 本文テンプレート
-
-```markdown
-## 概要
-<何を実装したかの1〜2文>
-
-## 変更内容
-- 作成: `path/to/file.sh` — <説明>
-- 変更: `path/to/other.md` — <説明>
-
-## テスト
-- [ ] `bash -n` シンタックスチェック PASS
-- [ ] 環境変数未設定時のエラーメッセージ確認
-
-Closes #XX
-```
-
----
-
-## コーディングガイドライン
-
-### シェルスクリプト
-
-```bash
-#!/usr/bin/env bash
-# スクリプトの説明
-#
-# 使用方法:
-#   REQUIRED_VAR="value" ./script.sh "引数"
-#
-# 環境変数:
-#   REQUIRED_VAR — 説明（必須）
-#   OPTIONAL_VAR — 説明（オプション、デフォルト: 値）
-
-set -euo pipefail
-```
-
-- **必ず `set -euo pipefail` を先頭に置く**
-- **ファイル名は `kebab-case`**: `chatwork-notify.sh`, `team-summary.sh`
-- **変数は大文字 + アンダースコア**: `CHATWORK_TOKEN`, `RETRY_COUNT`
-- **環境変数のプレフィックスは `STANDUP_`**: `STANDUP_WEBHOOK_URL`
-- **エラーは `>&2` で stderr に出力**:
-  ```bash
-  echo "エラー: 環境変数 STANDUP_CHATWORK_TOKEN が設定されていません。" >&2
-  exit 1
-  ```
-- **リトライ処理は最大3回**: Webhook 送信など外部通信はリトライ対応を推奨
-- **テンポラリファイルは `/tmp/` 以下**: クリーンアップも実装する
-
-### Markdown / ドキュメント
-
-- 見出しは `#` / `##` / `###` の3階層まで
-- コードブロックには言語を指定: ` ```bash `, ` ```json `
-- 日本語と英語の混在は最小限に（ユーザー向けは日本語優先）
-
----
-
-## SKILL.md の記述ルール
-
-### frontmatter（必須）
-
-```yaml
----
-name: skill-name
-description: >
-  1行の説明。Claude Code がスキルを認識するために使う。
-argument-hint: "[morning|evening] [options]"
----
-```
-
-- `name`: kebab-case で一意の名前
-- `description`: Claude Code が `/` コマンドの候補表示に使う。簡潔に
-- `argument-hint`: ユーザーへのヒント表示に使う
-
-### 本文構造
-
-```markdown
-# スキル名
-
-## Step 1: 〇〇する
-
-説明テキスト
-
-​```bash
-# コマンド例
-command --option
-​```
-
-## Step 2: 〇〇する
-...
-```
-
-- 各 Step は `## Step N:` で始める
-- コマンドブロックにはコメントで説明を付ける
-- `$ARGUMENTS` プレースホルダーで引数を参照する
-
-### 新しいオプションを追加するとき
-
-1. `SKILL.md` の frontmatter `argument-hint` を更新
-2. 該当する Step に処理フローを追加
-3. ドキュメントセクション（末尾付近）に使い方を追記
-
----
-
-## テスト方法
-
-### シンタックスチェック（必須）
-
-```bash
-# すべてのシェルスクリプトを確認
-find skills/ -name "*.sh" -exec bash -n {} \; && echo "All OK"
-```
-
-### 環境変数未設定テスト
-
-```bash
-# 例: Chatwork 通知スクリプト
-STANDUP_CHATWORK_TOKEN="" bash skills/standup/chatwork-notify.sh "test"
-# 期待: エラーメッセージが表示されて終了コード 1
-```
-
-### 動作確認
-
-```bash
-# スタンドアップ実行（実際のリポジトリで確認）
-/standup morning /path/to/your-repo
-
-# 新機能の動作確認は README.md の「テスト方法」セクションを参照
-```
-
----
-
-## Issue ラベル
-
-| ラベル | 説明 |
-|--------|------|
-| `enhancement` | 新機能・改善要望 |
-| `bug` | バグ報告 |
-| `documentation` | ドキュメント関連 |
-| `agent-task` | Agent Team が自動起票したタスク |
-| `management-request` | 経営 Agent からの要望 |
-| `needs-human` | 人間の判断が必要 |
-| `research` | 調査・分析タスク |
-
----
-
-## FAQ
-
-**Q: cron で動かない**
-
-A: cron は環境変数を引き継がないため、スクリプト内で明示的に設定してください：
-```bash
-# crontab -e に追加する例
-STANDUP_WEBHOOK_URL="https://hooks.slack.com/..."
-0 9 * * 1-5 bash ~/.claude/skills/standup/cron-standup.sh
-```
-
-**Q: Webhook が届かない**
-
-A: 以下を確認してください：
-1. `curl -s -o /dev/null -w "%{http_code}" -X POST "$STANDUP_WEBHOOK_URL" -d '{"text":"test"}'` で HTTP 200 が返るか
-2. Webhook URL が正しいか（Slack は `https://hooks.slack.com/services/` から始まる）
-3. ネットワーク接続に問題がないか
-
-**Q: WSL で文字化けする**
-
-A: `.bashrc` に以下を追加してください：
-```bash
-export LANG=ja_JP.UTF-8
-export LC_ALL=ja_JP.UTF-8
-```
-
-**Q: チーム複数人で使うには？**
-
-A: `skills/standup/team-summary.sh` を使用してください。各メンバーのスタンドアップ回答を収集・集計してチームサマリーを生成できます：
-```bash
-bash skills/standup/team-summary.sh \
-  /path/to/member1-repo \
-  /path/to/member2-repo
-```
-
-**Q: プライベートリポジトリでも使える？**
-
-A: はい。`gh auth login` で認証済みであれば、プライベートリポジトリの PR・Issue も取得できます。
-
-**Q: どのリポジトリでも使える？**
-
-A: Git リポジトリであれば使えます。GitHub 連携機能（PR、Issue）は GitHub リポジトリでのみ動作します。
-
----
-
-## サポート・スポンサーシップ
-
-### GitHub Sponsors
-
-GitHub Sponsors でプロジェクトを支援できます（リンク準備中）。
-スポンサーには Issue への優先対応・新機能の先行アクセスが含まれます。
-
-### 商用サポート契約
-
-保証された対応時間やカスタムスキル開発が必要なチーム向けにサポート契約を提供しています。
-
-**お問い合わせ:** `support-inquiry` ラベルで Issue を開くか、リポジトリプロフィールのメールアドレスへご連絡ください。
-
-詳細は [PRICING.md](./PRICING.md) を参照してください。
-
-### Skills Marketplace
-
-claude-hurikaeri のスキルは Claude Code スキルマーケットプレイスで公開しています：
-- [skillsmp.com](https://skillsmp.com) — 登録済み
-- [SkillHQ](https://skillhq.dev/) — 登録準備中
+質問や不具合は[GitHub Issues](https://github.com/t1k2a/claude-hurikaeri/issues)へ、秘密情報を除いた内容で投稿してください。

@@ -3,3 +3,4 @@
 .claude/settings.local.json
 .standup-config.json
 standup-*.html
+__pycache__/
