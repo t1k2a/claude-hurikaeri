@@ -18,6 +18,11 @@ Gitの作業記録を見ながら朝会・夕会を進める、日本語中心�
 
 ## インストール
 
+以下はGitHubのソース、または作者から直接入手したZIPをローカルに配置する手順です。
+マーケットプレイス経由の利用方法・導入可否は各サービスで確認してください。
+
+### ZIPから配置する場合
+
 ZIPを展開して `dev-rewind/SKILL.md` があることを確認します。
 下記の**いずれか1つ**の場所へ `dev-rewind` フォルダごと置きます。
 既存の同名フォルダがある場合は内容をバックアップして比較し、無断で上書きしないでください。
@@ -32,6 +37,89 @@ ZIPを展開して `dev-rewind/SKILL.md` があることを確認します。
 Claude Codeのプロジェクト限定なら `<project>/.claude/skills/dev-rewind/`。
 Codexのプロジェクト限定なら `<project>/.agents/skills/dev-rewind/`。
 配置後、ホストの再読込/新しいセッションでSkillの表示を確認します。
+
+### リポジトリからコマンドで配置する場合
+
+以下は、取得済みリポジトリのルート（`skills/dev-rewind/SKILL.md` がある場所）で実行します。
+配布ZIPを展開しただけのフォルダでは使わず、上の手動配置手順を使ってください。
+
+**Claude Codeは `agent` を `claude` のまま、Codexは `codex` に変えて**、使うOSのブロック全体を実行します。
+個人用ディレクトリへのコピーです。ホストやGitのインストール、ログイン、通信は行いません。
+
+#### macOS / Linux（sh・bash・zsh）
+
+```sh
+(
+  set -eu
+  agent=claude
+  case "$agent" in
+    claude) skills_relative=.claude/skills ;;
+    codex) skills_relative=.agents/skills ;;
+    *) printf '%s\n' 'Choose claude or codex.' >&2; exit 1 ;;
+  esac
+  source_dir=./skills/dev-rewind
+  skills_parent="$HOME/$skills_relative"
+  destination="$skills_parent/dev-rewind"
+
+  if [ ! -d "$source_dir" ] || [ ! -f "$source_dir/SKILL.md" ]; then
+    printf '%s\n' 'Source missing: run from the repository root.' >&2
+    exit 1
+  fi
+  if [ -e "$destination" ] || [ -L "$destination" ]; then
+    printf 'Destination already exists; not overwritten: %s\n' "$destination" >&2
+    exit 1
+  fi
+  mkdir -p "$skills_parent"
+  mkdir "$destination"
+  cp -R "$source_dir/." "$destination/"
+  printf 'Installed: %s\n' "$destination"
+)
+```
+
+#### Windows PowerShell
+
+```powershell
+& {
+    $ErrorActionPreference = 'Stop'
+    $agent = 'claude'
+    $skillsRelative = switch ($agent) {
+        'claude' { '.claude/skills' }
+        'codex' { '.agents/skills' }
+        default { throw 'Choose claude or codex.' }
+    }
+    $sourceDir = Join-Path (Get-Location).Path 'skills/dev-rewind'
+    $skillsParent = Join-Path $HOME $skillsRelative
+    $destination = Join-Path $skillsParent 'dev-rewind'
+
+    if (-not (Test-Path -LiteralPath $sourceDir -PathType Container) -or
+        -not (Test-Path -LiteralPath (Join-Path $sourceDir 'SKILL.md') -PathType Leaf)) {
+        throw 'Source missing: run from the repository root.'
+    }
+    if (Test-Path -LiteralPath $destination) {
+        throw "Destination already exists; not overwritten: $destination"
+    }
+    New-Item -ItemType Directory -Path $skillsParent -Force | Out-Null
+    New-Item -ItemType Directory -Path $destination -ErrorAction Stop | Out-Null
+    Get-ChildItem -LiteralPath $sourceDir -Force | ForEach-Object {
+        Copy-Item -LiteralPath $_.FullName -Destination $destination -Recurse -ErrorAction Stop
+    }
+    Write-Output "Installed: $destination"
+}
+```
+
+コピー元がない場合は配置先を作らず停止します。同名の配置先がある場合も上書きせず停止します。
+成功すると `Installed:` と配置先を表示します。コピー途中で失敗した場合は成功と扱わず、
+表示された配置先を確認してください。再実行しても既存フォルダには上書きしません。
+配置後は新しいセッションでDev Rewindを選び、対象Gitリポジトリで実行します。
+
+導入コマンドはWindows PowerShell 5.1とWindows上のGit Bashで、一時フォルダを使い
+初回成功・同名コピー先あり・コピー元なしを両ホストの配置先について検証しました。
+macOS/Linux実機と、各エージェントによるスキル読込・実利用のE2Eは未検証です。
+
+配置先は2026-10-13に [Claude Code公式](https://code.claude.com/docs/en/skills)と
+[Codex公式](https://developers.openai.com/codex/skills/)で確認しました。
+ローカル実行のホスト向けであり、クラウドセッションへ自動配置するものではありません。
+
 
 ### 最初の実行
 
@@ -86,4 +174,4 @@ Skillの実行依存ソフト自体は同梱しません。
 元リポジトリ: https://github.com/t1k2a/claude-hurikaeri
 不具合報告: https://github.com/t1k2a/claude-hurikaeri/issues
 公開npm `claude-hurikaeri-mcp` は別の配布物で、このZIPには含まれません。
-このZIPは `dev-rewind` 単体。旧 `/standup` aliasはリポジトリから別途両フォルダを配置します。
+このZIPは `dev-rewind` スキル単体です。
